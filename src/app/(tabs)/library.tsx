@@ -39,8 +39,8 @@ export default function LibraryTabScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>Library</Text>
         <Text style={styles.subheading}>
-          Unlimited knowledge to explore — not your photo album, and not
-          personalized adventures.
+          Garden Learning Graph — connected knowledge you can explore. Capture
+          in Discover to turn a node into a personal Memory.
         </Text>
       </View>
 

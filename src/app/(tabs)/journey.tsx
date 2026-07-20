@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 function StatCard({
@@ -27,7 +27,8 @@ function StatCard({
  */
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets();
-  const { journey, refresh } = useApp();
+  const { journey, refresh, learningGraph, memories } = useApp();
+  const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
@@ -36,6 +37,12 @@ export default function JourneyScreen() {
   );
 
   const snapshot = journey;
+  const garden = learningGraph.gardenProgress();
+  const next = learningGraph.recommendNext();
+  const animalsInGraph = memories.filter((item) => {
+    const node = learningGraph.getNodeByName(item.objectName);
+    return node?.category === "animals";
+  }).length;
 
   return (
     <View style={styles.root}>
@@ -67,15 +74,41 @@ export default function JourneyScreen() {
             label="🌎 Total Discoveries"
             value={snapshot?.totalDiscoveries ?? 0}
           />
+          <StatCard label="+ Animals" value={animalsInGraph} />
           <StatCard
-            label="📚 Learning Progress"
-            value={`${Math.round((snapshot?.learningProgress ?? 0) * 100)}%`}
-          />
-          <StatCard
-            label="🏅 Badges"
-            value={snapshot?.badges.length ?? 0}
+            label="🏡 Garden Progress"
+            value={`${garden.percent}%`}
           />
         </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>🏡 Garden Learning Graph</Text>
+          <Text style={styles.panelBody}>
+            {garden.discovered} / {garden.total} garden discoveries connected
+          </Text>
+          <View style={styles.track}>
+            <View
+              style={[
+                styles.fill,
+                { width: `${Math.min(100, garden.percent)}%` },
+              ]}
+            />
+          </View>
+        </View>
+
+        {next ? (
+          <Pressable
+            style={styles.nextCard}
+            onPress={() => router.push(`/library/${next.nodeId}`)}
+          >
+            <Text style={styles.nextEyebrow}>🌼 Next Recommendation</Text>
+            <Text style={styles.nextTitle}>
+              {next.emoji} Discover a {next.name}
+            </Text>
+            <Text style={styles.nextReason}>{next.reason}</Text>
+            <Text style={styles.nextFrom}>From {next.fromName}</Text>
+          </Pressable>
+        ) : null}
 
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>🎯 Weekly Goals</Text>
@@ -258,5 +291,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
     paddingVertical: 4,
+  },
+  nextCard: {
+    backgroundColor: colors.pastelGreen,
+    borderRadius: radii.xl,
+    padding: 18,
+    gap: 6,
+  },
+  nextEyebrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.mossDeep,
+  },
+  nextTitle: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    color: colors.navy,
+  },
+  nextReason: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.navy,
+    fontStyle: "italic",
+  },
+  nextFrom: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    color: colors.navySoft,
   },
 });

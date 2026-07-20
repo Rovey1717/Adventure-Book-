@@ -7,6 +7,8 @@
  * Journey    — long-term progress & motivation
  * Library    — universal encyclopedia (no memories, no adventures, no journey)
  * Parent     — family management
+ * Graph      — WorldGraph / LearningGraph / ChildKnowledgeGraph / Recommendations
+ *              (Garden is the first ecosystem; engines stay ecosystem-agnostic)
  *
  * These domains stay independent. AI recognition / generation can plug into
  * Discovery (suggestions) and Adventure (personalization) later without

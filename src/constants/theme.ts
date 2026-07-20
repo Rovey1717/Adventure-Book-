@@ -19,6 +19,21 @@ export const colors = {
   cameraScrim: "rgba(8, 20, 16, 0.42)",
   cameraInk: "#F7FFF8",
   success: "#2F9E6B",
+  /** Discovery Card design language */
+  navy: "#1B2A4A",
+  navySoft: "#3D4F73",
+  cream: "#FFF6EB",
+  peach: "#F8D9C0",
+  peachDeep: "#F0C4A0",
+  sunshine: "#F5C518",
+  lavender: "#E8DFF5",
+  lavenderInk: "#6B4FA0",
+  pastelBlue: "#D6E8FB",
+  pastelGreen: "#D7F0E2",
+  pastelPink: "#F8D6E2",
+  pastelYellow: "#FCEEBF",
+  pastelOrange: "#FFE0C2",
+  pastelPurple: "#E6D9F7",
 };
 
 export const fonts = {
@@ -36,4 +51,21 @@ export const space = {
   lg: 24,
   xl: 32,
   screen: 20,
+};
+
+export const radii = {
+  md: 18,
+  lg: 24,
+  xl: 32,
+  pill: 999,
+};
+
+export const shadows = {
+  soft: {
+    shadowColor: "#1B2A4A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
+  },
 };

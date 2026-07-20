@@ -8,6 +8,7 @@ import {
 } from "react";
 import { adventureRepository } from "@/data/adventure/AdventureRepository";
 import { discoveryRepository } from "@/data/discovery/DiscoveryRepository";
+import { graphRepository } from "@/data/graph/GraphRepository";
 import { libraryRepository } from "@/data/library/LibraryRepository";
 import { memoryRepository } from "@/data/memory/MemoryRepository";
 import type { PendingDiscovery } from "@/domain/discovery/pending";
@@ -24,6 +25,7 @@ import { DiscoveryJourneyService } from "@/services/DiscoveryJourneyService";
 import { DiscoveryService } from "@/services/DiscoveryService";
 import { JourneyService } from "@/services/JourneyService";
 import { LibraryService } from "@/services/LibraryService";
+import { LearningGraphService } from "@/services/graph/LearningGraphService";
 
 const discoveryService = new DiscoveryService(discoveryRepository);
 const memoryService = new MemoryService(memoryRepository);
@@ -33,16 +35,18 @@ const journeyService = new JourneyService(
   memoryRepository,
   adventureRepository,
 );
-const libraryService = new LibraryService(libraryRepository);
+const learningGraphService = new LearningGraphService(graphRepository);
+const libraryService = new LibraryService(
+  libraryRepository,
+  learningGraphService,
+);
 
 /**
  * RecognitionService lives ready for a future optional enhancement.
  * MVP discovery never calls it — families name discoveries manually.
  *
- * To enable AI suggestions later without changing capture → name → save:
- *   1. Pass `new RecognitionService()` into DiscoveryJourneyService.
- *   2. Call suggestNameForPending() before showing the Name screen.
- *   3. Prefill the text input from pending.suggestedName.
+ * Learning Graph (Garden) powers Discover search, related discoveries,
+ * and next-adventure recommendations — independent of Adventure unlock rules.
  */
 const journeyOrchestrator = new DiscoveryJourneyService(
   discoveryService,
@@ -60,6 +64,7 @@ type AppContextValue = {
   lastCapture: CaptureResult | null;
   pendingDiscovery: PendingDiscovery | null;
   library: LibraryService;
+  learningGraph: LearningGraphService;
   refresh: () => Promise<void>;
   beginPhotoDiscovery: (uri: string) => PendingDiscovery;
   confirmNamedDiscovery: (label: NamedDiscoveryLabel) => Promise<CaptureResult>;
@@ -101,6 +106,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       adventureService.getBoard(),
       journeyService.getSnapshot(),
     ]);
+    learningGraphService.syncFromMemoryNames(
+      nextMemories.map((item) => item.objectName),
+    );
+    for (const adventure of board.completed) {
+      const node = learningGraphService.getNodeByName(adventure.objectName);
+      if (node) learningGraphService.child.markAdventureCompleted(node.id);
+    }
     setMemories(nextMemories);
     setAdventureBoard(board);
     setJourney(snapshot);
@@ -200,6 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastCapture,
       pendingDiscovery,
       library: libraryService,
+      learningGraph: learningGraphService,
       refresh,
       beginPhotoDiscovery,
       confirmNamedDiscovery,

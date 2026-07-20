@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, fonts } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import type { LibraryEntry } from "@/domain/library/types";
 
@@ -10,20 +11,22 @@ type Props = {
 };
 
 /**
- * Live Library matches for intentional learning.
- * Selecting a card opens learning only — no Memory is created.
+ * Live Learning Graph matches for intentional learning.
+ * Selecting a card opens a Discovery Card — no Memory is created.
  */
 export function DiscoverSearchResults({ results, query, onSelect }: Props) {
+  const { learningGraph } = useApp();
+
   if (query.trim().length === 0) return null;
 
   return (
     <View style={styles.panel}>
       <Text style={styles.heading}>
-        {results.length > 0 ? "Start learning" : "No matches yet"}
+        {results.length > 0 ? "Garden discoveries" : "No matches yet"}
       </Text>
       {results.length === 0 ? (
         <Text style={styles.empty}>
-          Try another word, or capture something new with the camera below.
+          Try Butterfly, Bee, Flower, or Garden — or capture something new.
         </Text>
       ) : (
         <ScrollView
@@ -32,31 +35,35 @@ export function DiscoverSearchResults({ results, query, onSelect }: Props) {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {results.map((entry) => (
-            <Pressable
-              key={entry.id}
-              style={styles.card}
-              onPress={() => onSelect(entry)}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${entry.title} discovery card`}
-            >
-              <Text style={styles.emoji}>
-                {emojiForLibraryEntry(entry.title, entry.categoryId)}
-              </Text>
-              <View style={styles.copy}>
-                <Text style={styles.title}>{entry.title}</Text>
-                <Text style={styles.fact} numberOfLines={2}>
-                  {entry.facts[0]}
+          {results.map((entry) => {
+            const node = learningGraph.getNode(entry.id);
+            return (
+              <Pressable
+                key={entry.id}
+                style={styles.card}
+                onPress={() => onSelect(entry)}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${entry.title} discovery card`}
+              >
+                <Text style={styles.emoji}>
+                  {node?.emoji ??
+                    emojiForLibraryEntry(entry.title, entry.categoryId)}
                 </Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          ))}
+                <View style={styles.copy}>
+                  <Text style={styles.title}>{entry.title}</Text>
+                  <Text style={styles.fact} numberOfLines={2}>
+                    {entry.facts[0]}
+                  </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       )}
       <Text style={styles.footnote}>
-        Knowledge only — searching never creates memories, adventures, or
-        Journey progress
+        Graph search only — never creates memories, adventures, or Journey
+        progress
       </Text>
     </View>
   );

@@ -1,29 +1,65 @@
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import {
+  AdventureBanner,
+  ContinueExploring,
+  DiscoveryHero,
+  FactSection,
+  FamilyMemoryCard,
+  LearningStages,
+  QuizSection,
+  QuickActionGrid,
+  RelatedDiscoveries,
+  VideoCard,
+  WhyThisIsNext,
+  type QuickActionId,
+} from "@/components/discovery-card";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
-import type { LibraryQuizQuestion } from "@/domain/library/types";
+import { DEMO_CHILD_NAME } from "@/domain/parent/profile";
+
+type SectionKey = "watch" | "facts" | "quiz" | "activities" | "adventure";
 
 /**
- * Library card — universal knowledge only.
- * Never creates Memories, Adventures, or Journey progress.
+ * Discovery Card generated from a Learning Graph node.
+ * Related / Continue Exploring / Next Adventure all come from graph traversal.
  */
 export default function LibraryDiscoveryCardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { library } = useApp();
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
-  const [showQuiz, setShowQuiz] = useState(false);
+  const {
+    library,
+    learningGraph,
+    memories,
+    adventureBoard,
+    toggleFavorite,
+    startAdventure,
+  } = useApp();
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionY = useRef<Partial<Record<SectionKey, number>>>({});
+  const [soundHint, setSoundHint] = useState<string | null>(null);
+  const [, bump] = useState(0);
 
   const entry = useMemo(
     () => (id ? library.getEntry(id) : null),
     [id, library],
+  );
+
+  const graphNode = useMemo(
+    () => (id ? learningGraph.getNode(id) : null),
+    [id, learningGraph],
   );
 
   const category = useMemo(() => {
@@ -34,194 +70,294 @@ export default function LibraryDiscoveryCardScreen() {
     );
   }, [entry, library]);
 
+  const memory = useMemo(() => {
+    if (!entry) return null;
+    return (
+      memories.find(
+        (item) =>
+          item.objectName.toLowerCase() === entry.title.toLowerCase(),
+      ) ?? null
+    );
+  }, [entry, memories]);
+
+  const related = useMemo(
+    () => (id ? learningGraph.relatedDiscoveries(id, 4) : []),
+    [id, learningGraph],
+  );
+
+  const continueItems = useMemo(
+    () => (id ? learningGraph.continueExploring(id, 4) : []),
+    [id, learningGraph],
+  );
+
+  const recommendation = useMemo(() => {
+    if (!id) return null;
+    return learningGraph.recommendFrom(id);
+  }, [id, learningGraph, memories, bump]);
+
+  const progress = useMemo(
+    () => (id ? learningGraph.progressFor(id) : null),
+    [id, learningGraph, bump, memories],
+  );
+
+  const relatedAdventure = useMemo(() => {
+    if (!memory) return null;
+    return (
+      adventureBoard.continueAdventure.find(
+        (item) => item.memoryId === memory.id,
+      ) ??
+      adventureBoard.newAdventures.find((item) => item.memoryId === memory.id) ??
+      adventureBoard.recentlyUnlocked.find(
+        (item) => item.memoryId === memory.id,
+      ) ??
+      null
+    );
+  }, [adventureBoard, memory]);
+
+  const onSectionLayout =
+    (key: SectionKey) => (event: LayoutChangeEvent) => {
+      sectionY.current[key] = event.nativeEvent.layout.y;
+    };
+
+  const scrollTo = (key: SectionKey) => {
+    const y = sectionY.current[key];
+    if (typeof y === "number") {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+    }
+  };
+
+  const openNode = (nodeId: string) => {
+    router.push(`/library/${nodeId}`);
+  };
+
+  const onQuickAction = (actionId: QuickActionId) => {
+    switch (actionId) {
+      case "watch":
+        scrollTo("watch");
+        break;
+      case "sounds":
+      case "languages":
+        setSoundHint(
+          actionId === "sounds"
+            ? `Playing ${entry?.title ?? "discovery"} sounds…`
+            : `${entry?.title ?? "Word"} · ${entry?.pronunciation ?? ""}`,
+        );
+        break;
+      case "facts":
+        scrollTo("facts");
+        break;
+      case "quiz":
+        scrollTo("quiz");
+        break;
+      case "activities":
+        scrollTo("activities");
+        break;
+    }
+  };
+
+  const onStartAdventure = async () => {
+    if (!memory) return;
+    if (relatedAdventure) {
+      if (relatedAdventure.status === "unlocked") {
+        await startAdventure(relatedAdventure.id);
+      }
+      router.push(`/adventure/${relatedAdventure.id}`);
+      return;
+    }
+    router.push("/(tabs)/adventures");
+  };
+
   if (!entry) {
     return (
       <View style={[styles.root, styles.centered]}>
-        <Text style={styles.missingTitle}>Card not found</Text>
-        <Pressable style={styles.primary} onPress={() => router.back()}>
-          <Text style={styles.primaryText}>Go back</Text>
+        <Text style={styles.missingTitle}>Discovery not found</Text>
+        <Pressable style={styles.backPill} onPress={() => router.back()}>
+          <Text style={styles.backPillText}>Go back</Text>
         </Pressable>
       </View>
     );
   }
 
-  const accent = category?.accent ?? colors.moss;
-  const emoji = emojiForLibraryEntry(entry.title, entry.categoryId);
-  const question: LibraryQuizQuestion | undefined = entry.quiz[quizIndex];
-  const answered = selectedChoice !== null;
-  const correct = answered && selectedChoice === question?.answerIndex;
+  const emoji =
+    graphNode?.emoji ??
+    emojiForLibraryEntry(entry.title, entry.categoryId);
+  const categoryLabel =
+    graphNode?.category === "plants"
+      ? "Plants"
+      : graphNode?.category === "concepts"
+        ? "Science"
+        : category?.title ?? "Garden";
+  const discovered = !!memory;
+  const metaDate = memory
+    ? new Date(memory.discoveredAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : learningGraph.world.ecosystemTitle();
+
+  const masteryLabel = progress
+    ? `Mastery ${progress.masteryScore}%`
+    : null;
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[accent, colors.skyMid, colors.skyBottom]}
-        locations={[0, 0.45, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 16,
-            paddingBottom: insets.bottom + 28,
+            paddingTop: insets.top + 8,
+            paddingBottom: insets.bottom + 36,
           },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.back}>Close</Text>
-        </Pressable>
-
-        <Text style={styles.eyebrow}>
-          {category?.title ?? "Library"} · Encyclopedia
-        </Text>
-
-        <View style={styles.hero}>
-          <Text style={styles.emoji}>{emoji}</Text>
+        <View style={styles.header}>
+          <Pressable
+            style={styles.circleButton}
+            onPress={() => router.back()}
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.circleButtonText}>‹</Text>
+          </Pressable>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{entry.title}</Text>
+            <Text style={styles.headerSubtitle}>Discovery Card</Text>
+          </View>
+          <Pressable
+            style={styles.circleButton}
+            onPress={() => {
+              if (!memory) {
+                Alert.alert(
+                  "Save a memory first",
+                  "Favorite lives in Adventure Book after you discover this in the real world.",
+                );
+                return;
+              }
+              void toggleFavorite(memory.id);
+            }}
+            accessibilityLabel="Favorite"
+          >
+            <Text style={styles.circleButtonText}>
+              {memory?.isFavorite ? "♥" : "♡"}
+            </Text>
+          </Pressable>
         </View>
 
-        <Text style={styles.title}>{entry.title}</Text>
-        <Text style={styles.pronunciation}>{entry.pronunciation}</Text>
-        <Text style={styles.lead}>
-          Universal knowledge for everyone — this does not save a memory or
-          unlock adventures.
-        </Text>
+        <DiscoveryHero
+          title={entry.title}
+          categoryLabel={categoryLabel}
+          emoji={emoji}
+          meta={metaDate}
+          isFavorite={!!memory?.isFavorite}
+          onPlaySound={() =>
+            setSoundHint(`${entry.title} · ${entry.pronunciation}`)
+          }
+        />
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Pronunciation</Text>
-          <Text style={styles.panelBody}>{entry.pronunciation}</Text>
-        </View>
+        {graphNode?.description ? (
+          <Text style={styles.description}>{graphNode.description}</Text>
+        ) : null}
 
-        {entry.vocabulary.length > 0 ? (
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Vocabulary</Text>
-            <Text style={styles.panelBody}>{entry.vocabulary.join(" · ")}</Text>
+        {progress ? (
+          <View style={styles.masteryRow}>
+            <Text style={styles.masteryText}>
+              Video {progress.watchedVideo ? "✅" : "○"} · Quiz{" "}
+              {progress.completedQuiz ? "✅" : "○"} · Adventure{" "}
+              {progress.completedAdventure ? "✅" : "○"} · Mastery{" "}
+              {progress.masteryScore}%
+            </Text>
           </View>
         ) : null}
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Fun facts</Text>
-          {entry.facts.map((fact) => (
-            <View key={fact} style={styles.factRow}>
-              <Text style={styles.factBullet}>✦</Text>
-              <Text style={styles.factText}>{fact}</Text>
-            </View>
-          ))}
+        {soundHint ? <Text style={styles.soundHint}>{soundHint}</Text> : null}
+
+        <QuickActionGrid onPress={onQuickAction} />
+
+        <View onLayout={onSectionLayout("adventure")}>
+          <AdventureBanner
+            objectName={entry.title}
+            unlocked={discovered}
+            onStart={() => {
+              void onStartAdventure();
+            }}
+          />
         </View>
 
-        <View style={styles.activities}>
-          {entry.hasVideo ? (
-            <View style={styles.activityChip}>
-              <Text style={styles.activityText}>Video</Text>
-            </View>
-          ) : null}
-          {entry.hasSound ? (
-            <View style={styles.activityChip}>
-              <Text style={styles.activityText}>Sounds</Text>
-            </View>
-          ) : null}
-          <View style={styles.activityChip}>
-            <Text style={styles.activityText}>Facts</Text>
-          </View>
-          {entry.hasQuiz ? (
-            <View style={styles.activityChip}>
-              <Text style={styles.activityText}>Quiz</Text>
-            </View>
-          ) : null}
-        </View>
+        <RelatedDiscoveries items={related} onSelect={openNode} />
+
+        <WhyThisIsNext
+          recommendation={recommendation}
+          masteryLabel={
+            recommendation?.fromNodeId === id ? masteryLabel : null
+          }
+          onOpen={openNode}
+        />
+
+        <LearningStages
+          objectName={entry.title}
+          childName={
+            learningGraph.child.getProfile().name || DEMO_CHILD_NAME
+          }
+        />
 
         {entry.hasVideo ? (
-          <View style={styles.mediaStub}>
-            <Text style={styles.mediaTitle}>Video</Text>
-            <Text style={styles.mediaBody}>
-              Watch a short {entry.title} video (coming soon).
-            </Text>
+          <View onLayout={onSectionLayout("watch")}>
+            <VideoCard
+              objectName={entry.title}
+              childName={learningGraph.child.getProfile().name}
+              onPlay={() => {
+                if (id) {
+                  learningGraph.markWatchedVideo(id);
+                  bump((value) => value + 1);
+                }
+                Alert.alert(
+                  "Video coming soon",
+                  `A real-world ${entry.title.toLowerCase()} video will play here.`,
+                );
+              }}
+            />
           </View>
         ) : null}
 
-        {entry.hasSound ? (
-          <View style={styles.mediaStub}>
-            <Text style={styles.mediaTitle}>Sounds</Text>
-            <Text style={styles.mediaBody}>
-              Listen to {entry.title} sounds (coming soon).
-            </Text>
+        {memory ? <FamilyMemoryCard memory={memory} /> : null}
+
+        <View onLayout={onSectionLayout("facts")}>
+          <FactSection facts={entry.facts} vocabulary={entry.vocabulary} />
+        </View>
+
+        {entry.hasQuiz ? (
+          <View onLayout={onSectionLayout("quiz")}>
+            <QuizSection
+              objectName={entry.title}
+              questions={entry.quiz}
+              onComplete={() => {
+                if (id) {
+                  learningGraph.markQuizCompleted(id);
+                  bump((value) => value + 1);
+                }
+              }}
+            />
           </View>
         ) : null}
 
-        {entry.hasQuiz && entry.quiz.length > 0 ? (
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>{entry.title} Quiz</Text>
-            <Text style={styles.quizHint}>
-              Generic quiz — same for everyone, not personalized.
-            </Text>
+        <View
+          style={styles.activitiesNote}
+          onLayout={onSectionLayout("activities")}
+        >
+          <Text style={styles.activitiesTitle}>🎯 Activities</Text>
+          <Text style={styles.activitiesBody}>
+            Draw, count, listen, and explore more after you unlock the{" "}
+            {entry.title} Adventure from a real-world discovery.
+          </Text>
+        </View>
 
-            {!showQuiz ? (
-              <Pressable
-                style={styles.secondary}
-                onPress={() => {
-                  setShowQuiz(true);
-                  setQuizIndex(0);
-                  setSelectedChoice(null);
-                }}
-              >
-                <Text style={styles.secondaryText}>Take Quiz</Text>
-              </Pressable>
-            ) : question ? (
-              <View style={styles.quizBlock}>
-                <Text style={styles.question}>{question.question}</Text>
-                {question.choices.map((choice, index) => {
-                  const isSelected = selectedChoice === index;
-                  const isAnswer = index === question.answerIndex;
-                  return (
-                    <Pressable
-                      key={choice}
-                      style={[
-                        styles.choice,
-                        isSelected && styles.choiceSelected,
-                        answered && isAnswer && styles.choiceCorrect,
-                        answered && isSelected && !isAnswer && styles.choiceWrong,
-                      ]}
-                      disabled={answered}
-                      onPress={() => setSelectedChoice(index)}
-                    >
-                      <Text style={styles.choiceText}>{choice}</Text>
-                    </Pressable>
-                  );
-                })}
-                {answered ? (
-                  <Text style={styles.feedback}>
-                    {correct ? "Nice!" : "Good try — keep learning!"}
-                  </Text>
-                ) : null}
-                {answered ? (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      if (quizIndex < entry.quiz.length - 1) {
-                        setQuizIndex((current) => current + 1);
-                        setSelectedChoice(null);
-                      } else {
-                        setShowQuiz(false);
-                        setQuizIndex(0);
-                        setSelectedChoice(null);
-                      }
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>
-                      {quizIndex < entry.quiz.length - 1
-                        ? "Next question"
-                        : "Finish quiz"}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+        <ContinueExploring items={continueItems} onSelect={openNode} />
 
         <Text style={styles.footnote}>
-          Capture something in Discover to create a Memory, unlock Adventures,
-          and grow your Journey.
+          Connected through the Garden Learning Graph. Memories and Adventures
+          still come from Discover — not from browsing alone.
         </Text>
       </ScrollView>
     </View>
@@ -231,7 +367,7 @@ export default function LibraryDiscoveryCardScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.skyMid,
+    backgroundColor: colors.cream,
   },
   centered: {
     alignItems: "center",
@@ -240,187 +376,88 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   content: {
-    paddingHorizontal: space.lg,
-    gap: 12,
+    paddingHorizontal: space.screen,
+    gap: 18,
   },
-  back: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.mossDeep,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
-  eyebrow: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 13,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: colors.mossDeep,
-  },
-  hero: {
-    alignSelf: "center",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.55)",
+  circleButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.stroke,
   },
-  emoji: {
-    fontSize: 64,
-  },
-  title: {
+  circleButtonText: {
     fontFamily: fonts.display,
-    fontSize: 42,
-    lineHeight: 46,
-    color: colors.ink,
-    textAlign: "center",
+    fontSize: 22,
+    color: colors.navy,
+    lineHeight: 24,
   },
-  pronunciation: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 16,
-    color: colors.inkMuted,
-    textAlign: "center",
+  headerCopy: {
+    alignItems: "center",
+    gap: 2,
   },
-  lead: {
+  headerTitle: {
+    fontFamily: fonts.display,
+    fontSize: 22,
+    color: colors.navy,
+  },
+  headerSubtitle: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.inkMuted,
+    fontSize: 13,
+    color: colors.navySoft,
+  },
+  description: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.navySoft,
     textAlign: "center",
-    marginBottom: 4,
+    marginTop: -6,
   },
-  panel: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 20,
-    padding: 16,
-    gap: 10,
+  masteryRow: {
+    backgroundColor: colors.pastelBlue,
+    borderRadius: radii.lg,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
-  panelTitle: {
+  masteryText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    color: colors.navy,
+    textAlign: "center",
+  },
+  soundHint: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 14,
+    color: colors.lavenderInk,
+    textAlign: "center",
+    marginTop: -6,
+  },
+  activitiesNote: {
+    backgroundColor: colors.pastelYellow,
+    borderRadius: radii.xl,
+    padding: 18,
+    gap: 6,
+  },
+  activitiesTitle: {
     fontFamily: fonts.displaySemi,
     fontSize: 18,
-    color: colors.ink,
+    color: colors.navy,
   },
-  panelBody: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.inkMuted,
-  },
-  factRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
-  },
-  factBullet: {
-    fontFamily: fonts.bodyBold,
-    color: colors.orange,
-    marginTop: 2,
-  },
-  factText: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.inkMuted,
-  },
-  activities: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "center",
-  },
-  activityChip: {
-    backgroundColor: colors.mossSoft,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  activityText: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 13,
-    color: colors.mossDeep,
-  },
-  mediaStub: {
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderRadius: 16,
-    padding: 14,
-    gap: 4,
-  },
-  mediaTitle: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.ink,
-  },
-  mediaBody: {
+  activitiesBody: {
     fontFamily: fonts.body,
     fontSize: 14,
-    color: colors.inkMuted,
-  },
-  quizHint: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.inkSoft,
-  },
-  quizBlock: {
-    gap: 10,
-  },
-  question: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 16,
-    color: colors.ink,
-    lineHeight: 22,
-  },
-  choice: {
-    backgroundColor: colors.mossSoft,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  choiceSelected: {
-    borderColor: colors.moss,
-  },
-  choiceCorrect: {
-    borderColor: colors.success,
-    backgroundColor: "#D8F3E5",
-  },
-  choiceWrong: {
-    borderColor: colors.orangeDeep,
-  },
-  choiceText: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.ink,
-  },
-  feedback: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.mossDeep,
-  },
-  secondary: {
-    backgroundColor: colors.moss,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  secondaryText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.surfaceRaised,
-  },
-  primary: {
-    backgroundColor: colors.orange,
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  primaryText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 17,
-    color: colors.surfaceRaised,
+    lineHeight: 21,
+    color: colors.navySoft,
   },
   footnote: {
     fontFamily: fonts.body,
@@ -433,7 +470,18 @@ const styles = StyleSheet.create({
   missingTitle: {
     fontFamily: fonts.display,
     fontSize: 28,
-    color: colors.ink,
+    color: colors.navy,
     textAlign: "center",
+  },
+  backPill: {
+    backgroundColor: colors.navy,
+    borderRadius: radii.pill,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+  },
+  backPillText: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 16,
+    color: colors.surfaceRaised,
   },
 });
