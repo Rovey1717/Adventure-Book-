@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import {
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "long",
     day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -29,41 +31,50 @@ function MemoryCard({
   onPress: () => void;
 }) {
   const accent = accentForCategory(memory.category);
+  const showPhoto =
+    !!memory.photoUri && !memory.photoUri.startsWith("mock-");
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <View style={[styles.photo, { backgroundColor: accent }]}>
-        <Text style={styles.photoGlyph}>{memory.objectName.charAt(0)}</Text>
-      </View>
+      {showPhoto ? (
+        <Image source={{ uri: memory.photoUri! }} style={styles.photo} />
+      ) : (
+        <View style={[styles.photo, { backgroundColor: accent }]}>
+          <Text style={styles.photoGlyph}>{memory.objectName.charAt(0)}</Text>
+        </View>
+      )}
       <View style={styles.copy}>
         <Text style={styles.objectName}>{memory.objectName}</Text>
-        <Text style={styles.meta}>Found {formatDate(memory.discoveredAt)}</Text>
+        <Text style={styles.meta}>{formatDate(memory.discoveredAt)}</Text>
         {memory.locationLabel ? (
           <Text style={styles.meta}>{memory.locationLabel}</Text>
         ) : null}
         <Text style={styles.stats}>
-          {memory.discoveryCount} discover
-          {memory.discoveryCount === 1 ? "y" : "ies"} ·{" "}
-          {memory.adventuresCompleted} adventures completed
+          {memory.adventuresCompleted} adventure
+          {memory.adventuresCompleted === 1 ? "" : "s"} completed
         </Text>
         <View style={styles.flags}>
           {memory.isFavorite ? (
-            <Text style={styles.flagFavorite}>Favorite</Text>
-          ) : null}
-          <Text style={styles.flagCelebrate}>
-            {memory.celebrationStatus === "celebrated"
-              ? "Celebrated"
-              : "Ready to celebrate"}
-          </Text>
+            <Text style={styles.flagFavorite}>★ Favorite</Text>
+          ) : (
+            <Text style={styles.flagMuted}>Favorite</Text>
+          )}
         </View>
+        <Text style={styles.notes}>
+          {memory.notes?.trim() ? memory.notes : "Notes · coming soon"}
+        </Text>
       </View>
     </Pressable>
   );
 }
 
+/**
+ * Adventure Book tab — family memory book.
+ * Only capture creates memories; Library knowledge never appears here.
+ */
 export default function AdventureBookScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -95,7 +106,7 @@ export default function AdventureBookScreen() {
           <Text style={styles.emptyTitle}>No memories yet</Text>
           <Text style={styles.emptyBody}>
             Capture something outside in Discover — it will appear here as a
-            memory card, not a gallery photo.
+            memory, never in the Library.
           </Text>
         </View>
       ) : (
@@ -197,15 +208,19 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 10,
   },
-  flagCelebrate: {
-    fontFamily: fonts.bodyBold,
+  flagMuted: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: colors.mossDeep,
-    backgroundColor: colors.mossSoft,
-    overflow: "hidden",
-    paddingHorizontal: 10,
+    color: colors.inkSoft,
+    paddingHorizontal: 4,
     paddingVertical: 5,
-    borderRadius: 10,
+  },
+  notes: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginTop: 8,
+    fontStyle: "italic",
   },
   empty: {
     paddingHorizontal: 32,

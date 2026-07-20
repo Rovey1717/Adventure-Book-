@@ -5,11 +5,16 @@ export type AdventureKind =
   | "draw"
   | "seek"
   | "habitat"
-  | "sound";
+  | "sound"
+  | "count";
 
 export type AdventureStatus = "unlocked" | "in_progress" | "completed";
 
-/** A learning activity unlocked by a discovery/memory. */
+/**
+ * Personalized learning unlocked ONLY from a real-world Memory.
+ * Children cannot create adventures manually.
+ * Library cards never unlock adventures.
+ */
 export type Adventure = {
   id: string;
   memoryId: string;
@@ -23,7 +28,7 @@ export type Adventure = {
   points: number;
 };
 
-/** Template used to generate adventures from discovery data. */
+/** Template used to generate adventures from discovery/memory data. */
 export type AdventureBlueprint = {
   kind: AdventureKind;
   titleFor: (objectName: string) => string;

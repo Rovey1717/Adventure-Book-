@@ -13,15 +13,21 @@ const EMOJI_BY_TITLE: Record<string, string> = {
   Apple: "🍎",
   Ocean: "🌊",
   Rainbow: "🌈",
+  Moon: "🌙",
+  Rocket: "🚀",
+  Magnet: "🧲",
+  Tree: "🌳",
 };
 
 const EMOJI_BY_CATEGORY: Record<LibraryCategoryId, string> = {
   animals: "🐾",
-  vehicles: "🚗",
+  nature: "🌤️",
   ocean: "🌊",
   food: "🍽️",
+  vehicles: "🚗",
   construction: "🚧",
-  nature: "🌤️",
+  space: "🪐",
+  science: "🔬",
 };
 
 export function emojiForLibraryEntry(

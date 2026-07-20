@@ -35,6 +35,10 @@ function libraryCategoryToMemory(
       return "construction";
     case "nature":
       return "nature";
+    case "space":
+      return "nature";
+    case "science":
+      return "other";
     default:
       return "other";
   }

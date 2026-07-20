@@ -1,54 +1,65 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, space } from "@/constants/theme";
 
-const FUTURE_SECTIONS = [
-  "Learning Goals",
-  "Languages",
-  "Profiles",
-  "AI Settings",
-  "Subscription",
-  "Export Adventure Book",
+const MANAGEMENT_SECTIONS = [
+  { title: "Profiles", meta: "Family members and ages" },
+  { title: "Learning Goals", meta: "What each child is working toward" },
+  { title: "Languages", meta: "Spoken language and learning languages" },
+  { title: "Notifications", meta: "Reminders and weekly summaries" },
+  { title: "Export Adventure Book", meta: "Share memories with family" },
+  { title: "Subscription", meta: "Plan and billing" },
+  { title: "Settings", meta: "Privacy, storage, and preferences" },
 ];
 
+/**
+ * Parent domain — family management only.
+ * Does not host Discover, memories, adventures, journey stats, or encyclopedia.
+ */
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={{
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + 32,
+        paddingHorizontal: space.screen,
+        gap: 12,
+      }}
+    >
       <Text style={styles.title}>Parent</Text>
       <Text style={styles.subtitle}>
-        Insights and controls for grown-ups.
+        Family management — separate from memories, learning, and knowledge.
       </Text>
 
       <Pressable
         style={styles.row}
-        onPress={() => router.push("/library")}
+        onPress={() => router.push("/(tabs)/library")}
       >
-        <Text style={styles.rowTitle}>Library Encyclopedia</Text>
+        <Text style={styles.rowTitle}>Browse Library</Text>
         <Text style={styles.rowMeta}>
-          Permanent learning content — never mixed with Adventure Book memories
+          Universal encyclopedia — never mixed with Adventure Book memories
         </Text>
       </Pressable>
 
-      {FUTURE_SECTIONS.map((section) => (
-        <View key={section} style={styles.rowMuted}>
-          <Text style={styles.rowTitleMuted}>{section}</Text>
-          <Text style={styles.rowMeta}>Coming soon</Text>
+      {MANAGEMENT_SECTIONS.map((section) => (
+        <View key={section.title} style={styles.rowMuted}>
+          <Text style={styles.rowTitleMuted}>{section.title}</Text>
+          <Text style={styles.rowMeta}>{section.meta} · Coming soon</Text>
         </View>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: colors.surface,
-    paddingHorizontal: space.screen,
-    gap: 12,
   },
   title: {
     fontFamily: fonts.display,

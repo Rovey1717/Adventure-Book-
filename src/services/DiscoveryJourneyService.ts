@@ -28,9 +28,11 @@ export type NamedDiscoveryLabel = {
  * Orchestrates the Discovery Journey without coupling UI to repositories.
  * Library is intentionally never touched here.
  *
- * MVP photo flow: capture → family names it → save discovery / memory / adventures.
- * RecognitionService is optional and unused in MVP. Plug it in later to suggest
- * names without changing saveNamedDiscovery or the overall flow.
+ * Capture flow (only path that creates progress):
+ *   capture → name → Memory → unlock Adventures → update Journey → Adventure Book
+ *
+ * Search / Library is a separate knowledge path and must never call this service
+ * for memories, adventures, or journey updates.
  */
 export class DiscoveryJourneyService {
   constructor(

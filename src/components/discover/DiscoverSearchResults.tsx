@@ -54,7 +54,10 @@ export function DiscoverSearchResults({ results, query, onSelect }: Props) {
           ))}
         </ScrollView>
       )}
-      <Text style={styles.footnote}>Learning only — not saved to Adventure Book</Text>
+      <Text style={styles.footnote}>
+        Knowledge only — searching never creates memories, adventures, or
+        Journey progress
+      </Text>
     </View>
   );
 }

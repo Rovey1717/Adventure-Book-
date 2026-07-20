@@ -6,6 +6,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
+/**
+ * Celebration after a real-world Memory is saved.
+ * Adventures unlock from this capture — Library search never reaches here.
+ */
 export default function CelebrateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -24,14 +28,14 @@ export default function CelebrateScreen() {
           (item) => item.memoryId === id,
         ).length;
 
-  const points = lastCapture?.memory.id === id ? lastCapture.discoveryPoints : 50;
-  const badge =
-    lastCapture?.memory.id === id ? lastCapture.badgeTitle : "Curious Explorer";
-
   const firstAdventureId =
     lastCapture?.memory.id === id
       ? lastCapture.adventures[0]?.id
       : adventureBoard.recentlyUnlocked.find((item) => item.memoryId === id)?.id;
+
+  const markCelebrated = async () => {
+    if (memory) await celebrateMemory(memory.id);
+  };
 
   return (
     <View style={styles.root}>
@@ -48,63 +52,53 @@ export default function CelebrateScreen() {
           },
         ]}
       >
-        <Text style={styles.eyebrow}>You Found...</Text>
+        <Text style={styles.party}>🎉</Text>
+        <Text style={styles.eyebrow}>You discovered...</Text>
         <Text style={styles.title}>{memory?.objectName ?? "Discovery"}</Text>
         <Text style={styles.body}>
-          Saved to Adventure Book · {unlockedCount} adventure
-          {unlockedCount === 1 ? "" : "s"} unlocked
+          {unlockedCount > 0
+            ? `Adventure unlocked! ${unlockedCount} learning adventure${unlockedCount === 1 ? "" : "s"} ready to explore.`
+            : "Saved forever in Adventure Book."}
         </Text>
-
-        <View style={styles.stats}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>+{points}</Text>
-            <Text style={styles.statLabel}>Discovery Points</Text>
-          </View>
-          {badge ? (
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{badge}</Text>
-              <Text style={styles.statLabel}>Badge</Text>
-            </View>
-          ) : null}
-        </View>
 
         <Pressable
           style={styles.primary}
           onPress={() => {
             void (async () => {
-              if (memory) await celebrateMemory(memory.id);
-              if (router.canGoBack()) router.back();
-              else router.replace("/");
+              await markCelebrated();
+              if (firstAdventureId) {
+                router.replace(`/adventure/${firstAdventureId}`);
+              } else {
+                router.replace("/(tabs)/adventures");
+              }
             })();
           }}
         >
-          <Text style={styles.primaryText}>Celebrate</Text>
+          <Text style={styles.primaryText}>Continue Adventure</Text>
         </Pressable>
 
         <Pressable
           style={styles.secondary}
           onPress={() => {
             void (async () => {
-              if (memory) await celebrateMemory(memory.id);
-              if (firstAdventureId) {
-                router.replace(`/adventure/${firstAdventureId}`);
-              } else {
-                router.replace("/adventures");
-              }
+              await markCelebrated();
+              router.replace("/");
             })();
           }}
         >
-          <Text style={styles.secondaryText}>Start Adventure</Text>
+          <Text style={styles.secondaryText}>Keep Exploring</Text>
         </Pressable>
 
         <Pressable
           style={styles.tertiary}
           onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace("/");
+            void (async () => {
+              await markCelebrated();
+              router.replace("/(tabs)/adventure-book");
+            })();
           }}
         >
-          <Text style={styles.tertiaryText}>Keep Exploring</Text>
+          <Text style={styles.tertiaryText}>View Adventure Book</Text>
         </Pressable>
       </View>
     </View>
@@ -118,6 +112,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     justifyContent: "center",
     gap: 14,
+  },
+  party: {
+    fontSize: 40,
+    marginBottom: 4,
   },
   eyebrow: {
     fontFamily: fonts.bodySemi,
@@ -137,28 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: colors.inkMuted,
-  },
-  stats: {
-    flexDirection: "row",
-    gap: 10,
-    marginVertical: 8,
-  },
-  stat: {
-    flex: 1,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 16,
-    padding: 14,
-    gap: 4,
-  },
-  statValue: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 18,
-    color: colors.ink,
-  },
-  statLabel: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.inkMuted,
+    marginBottom: 8,
   },
   primary: {
     backgroundColor: colors.orange,

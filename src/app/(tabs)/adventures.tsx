@@ -38,8 +38,8 @@ function Section({
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>{adventure.title}</Text>
               <Text style={styles.rowMeta}>
-                {adventure.objectName} · {adventure.status.replace("_", " ")} ·{" "}
-                {adventure.points} pts
+                From {adventure.objectName} ·{" "}
+                {adventure.status.replace("_", " ")} · {adventure.points} pts
               </Text>
             </View>
           </Pressable>
@@ -49,6 +49,10 @@ function Section({
   );
 }
 
+/**
+ * Adventures tab — personalized learning unlocked only from real-world Memories.
+ * Library search never creates adventures here.
+ */
 export default function AdventuresScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -80,7 +84,8 @@ export default function AdventuresScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>Adventures</Text>
         <Text style={styles.subheading}>
-          Learning begins after discovery — unlocked from what you find outside.
+          Personalized learning unlocked after you capture something in the real
+          world. Adventures cannot be created manually.
         </Text>
       </View>
 
@@ -91,27 +96,27 @@ export default function AdventuresScreen() {
         onPress={openAdventure}
       />
       <Section
+        title="New Adventures"
+        adventures={adventureBoard.newAdventures}
+        empty="Capture a discovery in Discover to unlock adventures."
+        onPress={openAdventure}
+      />
+      <Section
         title="Recently Unlocked"
         adventures={adventureBoard.recentlyUnlocked}
-        empty="Discover something to unlock adventures."
-        onPress={openAdventure}
-      />
-      <Section
-        title="Unlocked Adventures"
-        adventures={adventureBoard.unlocked}
-        empty="All clear — go explore!"
-        onPress={openAdventure}
-      />
-      <Section
-        title="Suggested Adventures"
-        adventures={adventureBoard.suggested}
-        empty="Suggestions appear as you unlock more."
+        empty="New unlocks will show up here after a discovery."
         onPress={openAdventure}
       />
       <Section
         title="Completed Adventures"
         adventures={adventureBoard.completed}
         empty="Completed adventures will live here."
+        onPress={openAdventure}
+      />
+      <Section
+        title="Suggested Adventures"
+        adventures={adventureBoard.suggested}
+        empty="Suggestions appear as you unlock more from discoveries."
         onPress={openAdventure}
       />
     </ScrollView>

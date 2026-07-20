@@ -78,7 +78,7 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const emptyBoard: AdventureBoard = {
-  unlocked: [],
+  newAdventures: [],
   continueAdventure: [],
   completed: [],
   suggested: [],

@@ -45,14 +45,14 @@ export default function AdventureDetailScreen() {
       <Pressable onPress={() => router.back()}>
         <Text style={styles.back}>Back</Text>
       </Pressable>
-      <Text style={styles.eyebrow}>{adventure.objectName}</Text>
+      <Text style={styles.eyebrow}>From your {adventure.objectName} discovery</Text>
       <Text style={styles.title}>{adventure.title}</Text>
       <Text style={styles.body}>
         Status: {adventure.status.replace("_", " ")} · {adventure.points} points
       </Text>
       <Text style={styles.body}>
-        This adventure was generated from your discovery data. Future AI will
-        personalize these by age, interests, and learning goals.
+        Personalized from your real-world Memory. Future AI will tailor these by
+        age, interests, season, and learning goals.
       </Text>
 
       {adventure.status !== "completed" ? (
@@ -87,9 +87,9 @@ export default function AdventureDetailScreen() {
 
       <Pressable
         style={styles.link}
-        onPress={() => router.push("/library")}
+        onPress={() => router.push(`/(tabs)/adventure-book`)}
       >
-        <Text style={styles.linkText}>Open Library encyclopedia</Text>
+        <Text style={styles.linkText}>View in Adventure Book</Text>
       </Pressable>
     </View>
   );

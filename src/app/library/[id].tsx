@@ -6,17 +6,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
+import type { LibraryQuizQuestion } from "@/domain/library/types";
 
 /**
- * Library discovery card — intentional learning only.
- * Opening this screen never creates an Adventure Book memory.
+ * Library card — universal knowledge only.
+ * Never creates Memories, Adventures, or Journey progress.
  */
 export default function LibraryDiscoveryCardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { library } = useApp();
-  const [started, setStarted] = useState(false);
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
 
   const entry = useMemo(
     () => (id ? library.getEntry(id) : null),
@@ -34,7 +37,7 @@ export default function LibraryDiscoveryCardScreen() {
   if (!entry) {
     return (
       <View style={[styles.root, styles.centered]}>
-        <Text style={styles.missingTitle}>Discovery not found</Text>
+        <Text style={styles.missingTitle}>Card not found</Text>
         <Pressable style={styles.primary} onPress={() => router.back()}>
           <Text style={styles.primaryText}>Go back</Text>
         </Pressable>
@@ -44,6 +47,9 @@ export default function LibraryDiscoveryCardScreen() {
 
   const accent = category?.accent ?? colors.moss;
   const emoji = emojiForLibraryEntry(entry.title, entry.categoryId);
+  const question: LibraryQuizQuestion | undefined = entry.quiz[quizIndex];
+  const answered = selectedChoice !== null;
+  const correct = answered && selectedChoice === question?.answerIndex;
 
   return (
     <View style={styles.root}>
@@ -67,7 +73,7 @@ export default function LibraryDiscoveryCardScreen() {
         </Pressable>
 
         <Text style={styles.eyebrow}>
-          {category?.title ?? "Library"} · Learning
+          {category?.title ?? "Library"} · Encyclopedia
         </Text>
 
         <View style={styles.hero}>
@@ -77,19 +83,24 @@ export default function LibraryDiscoveryCardScreen() {
         <Text style={styles.title}>{entry.title}</Text>
         <Text style={styles.pronunciation}>{entry.pronunciation}</Text>
         <Text style={styles.lead}>
-          Let's explore together — no photo needed.
+          Universal knowledge for everyone — this does not save a memory or
+          unlock adventures.
         </Text>
 
-        {started ? (
-          <View style={styles.startedBanner}>
-            <Text style={styles.startedText}>
-              You're learning about {entry.title}!
-            </Text>
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Pronunciation</Text>
+          <Text style={styles.panelBody}>{entry.pronunciation}</Text>
+        </View>
+
+        {entry.vocabulary.length > 0 ? (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Vocabulary</Text>
+            <Text style={styles.panelBody}>{entry.vocabulary.join(" · ")}</Text>
           </View>
         ) : null}
 
-        <View style={styles.facts}>
-          <Text style={styles.factsHeading}>Fun facts</Text>
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Fun facts</Text>
           {entry.facts.map((fact) => (
             <View key={fact} style={styles.factRow}>
               <Text style={styles.factBullet}>✦</Text>
@@ -109,25 +120,108 @@ export default function LibraryDiscoveryCardScreen() {
               <Text style={styles.activityText}>Sounds</Text>
             </View>
           ) : null}
+          <View style={styles.activityChip}>
+            <Text style={styles.activityText}>Facts</Text>
+          </View>
           {entry.hasQuiz ? (
             <View style={styles.activityChip}>
               <Text style={styles.activityText}>Quiz</Text>
             </View>
           ) : null}
-          <View style={styles.activityChip}>
-            <Text style={styles.activityText}>Facts</Text>
-          </View>
         </View>
 
-        <Pressable style={styles.primary} onPress={() => setStarted(true)}>
-          <Text style={styles.primaryText}>
-            {started ? "Keep Exploring Facts" : "Begin Learning"}
-          </Text>
-        </Pressable>
+        {entry.hasVideo ? (
+          <View style={styles.mediaStub}>
+            <Text style={styles.mediaTitle}>Video</Text>
+            <Text style={styles.mediaBody}>
+              Watch a short {entry.title} video (coming soon).
+            </Text>
+          </View>
+        ) : null}
+
+        {entry.hasSound ? (
+          <View style={styles.mediaStub}>
+            <Text style={styles.mediaTitle}>Sounds</Text>
+            <Text style={styles.mediaBody}>
+              Listen to {entry.title} sounds (coming soon).
+            </Text>
+          </View>
+        ) : null}
+
+        {entry.hasQuiz && entry.quiz.length > 0 ? (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>{entry.title} Quiz</Text>
+            <Text style={styles.quizHint}>
+              Generic quiz — same for everyone, not personalized.
+            </Text>
+
+            {!showQuiz ? (
+              <Pressable
+                style={styles.secondary}
+                onPress={() => {
+                  setShowQuiz(true);
+                  setQuizIndex(0);
+                  setSelectedChoice(null);
+                }}
+              >
+                <Text style={styles.secondaryText}>Take Quiz</Text>
+              </Pressable>
+            ) : question ? (
+              <View style={styles.quizBlock}>
+                <Text style={styles.question}>{question.question}</Text>
+                {question.choices.map((choice, index) => {
+                  const isSelected = selectedChoice === index;
+                  const isAnswer = index === question.answerIndex;
+                  return (
+                    <Pressable
+                      key={choice}
+                      style={[
+                        styles.choice,
+                        isSelected && styles.choiceSelected,
+                        answered && isAnswer && styles.choiceCorrect,
+                        answered && isSelected && !isAnswer && styles.choiceWrong,
+                      ]}
+                      disabled={answered}
+                      onPress={() => setSelectedChoice(index)}
+                    >
+                      <Text style={styles.choiceText}>{choice}</Text>
+                    </Pressable>
+                  );
+                })}
+                {answered ? (
+                  <Text style={styles.feedback}>
+                    {correct ? "Nice!" : "Good try — keep learning!"}
+                  </Text>
+                ) : null}
+                {answered ? (
+                  <Pressable
+                    style={styles.secondary}
+                    onPress={() => {
+                      if (quizIndex < entry.quiz.length - 1) {
+                        setQuizIndex((current) => current + 1);
+                        setSelectedChoice(null);
+                      } else {
+                        setShowQuiz(false);
+                        setQuizIndex(0);
+                        setSelectedChoice(null);
+                      }
+                    }}
+                  >
+                    <Text style={styles.secondaryText}>
+                      {quizIndex < entry.quiz.length - 1
+                        ? "Next question"
+                        : "Finish quiz"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <Text style={styles.footnote}>
-          This is Library learning. Capturing with the camera creates memories
-          in Adventure Book.
+          Capture something in Discover to create a Memory, unlock Adventures,
+          and grow your Journey.
         </Text>
       </ScrollView>
     </View>
@@ -190,34 +284,28 @@ const styles = StyleSheet.create({
   },
   lead: {
     fontFamily: fonts.body,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.inkMuted,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  startedBanner: {
-    backgroundColor: colors.mossSoft,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  startedText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.mossDeep,
-    textAlign: "center",
-  },
-  facts: {
+  panel: {
     backgroundColor: colors.surfaceRaised,
     borderRadius: 20,
     padding: 16,
-    gap: 12,
+    gap: 10,
   },
-  factsHeading: {
+  panelTitle: {
     fontFamily: fonts.displaySemi,
     fontSize: 18,
     color: colors.ink,
+  },
+  panelBody: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.inkMuted,
   },
   factRow: {
     flexDirection: "row",
@@ -241,7 +329,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     justifyContent: "center",
-    marginTop: 4,
   },
   activityChip: {
     backgroundColor: colors.mossSoft,
@@ -254,12 +341,81 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mossDeep,
   },
+  mediaStub: {
+    backgroundColor: "rgba(255,255,255,0.55)",
+    borderRadius: 16,
+    padding: 14,
+    gap: 4,
+  },
+  mediaTitle: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 16,
+    color: colors.ink,
+  },
+  mediaBody: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.inkMuted,
+  },
+  quizHint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.inkSoft,
+  },
+  quizBlock: {
+    gap: 10,
+  },
+  question: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.ink,
+    lineHeight: 22,
+  },
+  choice: {
+    backgroundColor: colors.mossSoft,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  choiceSelected: {
+    borderColor: colors.moss,
+  },
+  choiceCorrect: {
+    borderColor: colors.success,
+    backgroundColor: "#D8F3E5",
+  },
+  choiceWrong: {
+    borderColor: colors.orangeDeep,
+  },
+  choiceText: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.ink,
+  },
+  feedback: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 16,
+    color: colors.mossDeep,
+  },
+  secondary: {
+    backgroundColor: colors.moss,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  secondaryText: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 16,
+    color: colors.surfaceRaised,
+  },
   primary: {
     backgroundColor: colors.orange,
     borderRadius: 18,
     paddingVertical: 16,
     alignItems: "center",
-    marginTop: 8,
   },
   primaryText: {
     fontFamily: fonts.displaySemi,

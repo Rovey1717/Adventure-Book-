@@ -65,13 +65,6 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="library/index"
-          options={{
-            presentation: "modal",
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
           name="library/[id]"
           options={{
             presentation: "modal",

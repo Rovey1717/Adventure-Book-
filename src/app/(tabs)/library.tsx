@@ -14,17 +14,17 @@ import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import type { LibraryCategoryId } from "@/domain/library/types";
 
 /**
- * Encyclopedia Library — permanent learning content.
- * Never stores personal discovery photos or creates memories.
+ * Library tab — universal encyclopedia / knowledge home.
+ * Never stores personal memories and never unlocks Adventures or Journey progress.
  */
-export default function LibraryEncyclopediaScreen() {
+export default function LibraryTabScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { library } = useApp();
   const categories = library.getCategories();
-  const [activeCategory, setActiveCategory] = useState<LibraryCategoryId | "all">(
-    "all",
-  );
+  const [activeCategory, setActiveCategory] = useState<
+    LibraryCategoryId | "all"
+  >("all");
 
   const entries = useMemo(
     () =>
@@ -36,13 +36,13 @@ export default function LibraryEncyclopediaScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
-      <Pressable onPress={() => router.back()} style={styles.backWrap}>
-        <Text style={styles.back}>Back</Text>
-      </Pressable>
-      <Text style={styles.heading}>Library</Text>
-      <Text style={styles.subheading}>
-        An encyclopedia for lifelong learning — not your photo album.
-      </Text>
+      <View style={styles.header}>
+        <Text style={styles.heading}>Library</Text>
+        <Text style={styles.subheading}>
+          Unlimited knowledge to explore — not your photo album, and not
+          personalized adventures.
+        </Text>
+      </View>
 
       <FlatList
         horizontal
@@ -94,6 +94,8 @@ export default function LibraryEncyclopediaScreen() {
                 item.hasSound ? "Sounds" : null,
                 item.hasQuiz ? "Quiz" : null,
                 "Facts",
+                "Pronunciation",
+                "Vocabulary",
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -109,14 +111,11 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.surface,
+  },
+  header: {
     paddingHorizontal: space.screen,
-  },
-  backWrap: {
-    marginBottom: 8,
-  },
-  back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.moss,
+    marginBottom: 12,
+    gap: 6,
   },
   heading: {
     fontFamily: fonts.display,
@@ -127,11 +126,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 15,
     color: colors.inkMuted,
-    marginBottom: 14,
     lineHeight: 22,
   },
   chips: {
     gap: 8,
+    paddingHorizontal: space.screen,
     paddingBottom: 14,
   },
   chip: {
@@ -152,6 +151,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 12,
+    paddingHorizontal: space.screen,
     paddingBottom: 40,
   },
   card: {

@@ -21,6 +21,10 @@ function StatCard({
   );
 }
 
+/**
+ * Journey tab — progress home.
+ * Motivates continued discovery without mixing memories or encyclopedia content.
+ */
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets();
   const { journey, refresh } = useApp();
@@ -55,28 +59,26 @@ export default function JourneyScreen() {
         </View>
 
         <View style={styles.grid}>
-          <StatCard label="Day streak" value={snapshot?.streakDays ?? 0} />
           <StatCard
-            label="Discoveries"
+            label="🔥 Current Streak"
+            value={snapshot?.streakDays ?? 0}
+          />
+          <StatCard
+            label="🌎 Total Discoveries"
             value={snapshot?.totalDiscoveries ?? 0}
           />
           <StatCard
-            label="Animals"
-            value={snapshot?.animalsDiscovered ?? 0}
-          />
-          <StatCard
-            label="Vehicles"
-            value={snapshot?.vehiclesDiscovered ?? 0}
-          />
-          <StatCard label="Plants" value={snapshot?.plantsDiscovered ?? 0} />
-          <StatCard
-            label="Learning"
+            label="📚 Learning Progress"
             value={`${Math.round((snapshot?.learningProgress ?? 0) * 100)}%`}
+          />
+          <StatCard
+            label="🏅 Badges"
+            value={snapshot?.badges.length ?? 0}
           />
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Weekly goal</Text>
+          <Text style={styles.panelTitle}>🎯 Weekly Goals</Text>
           <Text style={styles.panelBody}>
             {snapshot?.weeklyGoal.current ?? 0} /{" "}
             {snapshot?.weeklyGoal.target ?? 5} discoveries this week
@@ -99,9 +101,11 @@ export default function JourneyScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Badges earned</Text>
+          <Text style={styles.panelTitle}>🏅 Badges</Text>
           {(snapshot?.badges.length ?? 0) === 0 ? (
-            <Text style={styles.panelBody}>Earn your first badge by discovering something outside.</Text>
+            <Text style={styles.panelBody}>
+              Earn your first badge by discovering something outside.
+            </Text>
           ) : (
             snapshot?.badges.map((badge) => (
               <Text key={badge.id} style={styles.badge}>
@@ -112,33 +116,7 @@ export default function JourneyScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Collections</Text>
-          {(snapshot?.collections.length ?? 0) === 0 ? (
-            <Text style={styles.panelBody}>Collections grow as you explore.</Text>
-          ) : (
-            snapshot?.collections.map((collection) => (
-              <Text key={collection.id} style={styles.badge}>
-                {collection.title}: {collection.count}
-              </Text>
-            ))
-          )}
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Upcoming adventures</Text>
-          {(snapshot?.upcomingAdventures.length ?? 0) === 0 ? (
-            <Text style={styles.panelBody}>Unlock adventures from Discover.</Text>
-          ) : (
-            snapshot?.upcomingAdventures.map((adventure) => (
-              <Text key={adventure.id} style={styles.badge}>
-                {adventure.title}
-              </Text>
-            ))
-          )}
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Favorite memories</Text>
+          <Text style={styles.panelTitle}>⭐ Favorite Memories</Text>
           {(snapshot?.favoriteMemories.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Star memories in Adventure Book to see them here.
@@ -153,9 +131,41 @@ export default function JourneyScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Recently completed</Text>
+          <Text style={styles.panelTitle}>Collections</Text>
+          {(snapshot?.collections.length ?? 0) === 0 ? (
+            <Text style={styles.panelBody}>
+              Collections grow as you explore.
+            </Text>
+          ) : (
+            snapshot?.collections.map((collection) => (
+              <Text key={collection.id} style={styles.badge}>
+                {collection.title}: {collection.count}
+              </Text>
+            ))
+          )}
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Upcoming Adventures</Text>
+          {(snapshot?.upcomingAdventures.length ?? 0) === 0 ? (
+            <Text style={styles.panelBody}>
+              Unlock adventures by capturing real-world discoveries.
+            </Text>
+          ) : (
+            snapshot?.upcomingAdventures.map((adventure) => (
+              <Text key={adventure.id} style={styles.badge}>
+                {adventure.title}
+              </Text>
+            ))
+          )}
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Recently Completed Adventures</Text>
           {(snapshot?.recentlyCompletedAdventures.length ?? 0) === 0 ? (
-            <Text style={styles.panelBody}>Complete an adventure to fill this list.</Text>
+            <Text style={styles.panelBody}>
+              Complete an adventure to fill this list.
+            </Text>
           ) : (
             snapshot?.recentlyCompletedAdventures.map((adventure) => (
               <Text key={adventure.id} style={styles.badge}>
@@ -163,6 +173,11 @@ export default function JourneyScreen() {
               </Text>
             ))
           )}
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Discovery Timeline</Text>
+          <Text style={styles.panelBody}>Coming soon</Text>
         </View>
       </ScrollView>
     </View>

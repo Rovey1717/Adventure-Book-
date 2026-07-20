@@ -234,7 +234,7 @@ export default function DiscoverScreen() {
         </Pressable>
         <Pressable
           style={styles.permissionSecondary}
-          onPress={() => router.push("/library")}
+          onPress={() => router.push("/(tabs)/library")}
         >
           <Text style={styles.permissionSecondaryText}>Browse Library</Text>
         </Pressable>
@@ -286,7 +286,7 @@ export default function DiscoverScreen() {
           </Text>
         ) : (
           <Text style={styles.modeHint}>
-            Search to learn · Camera saves memories
+            Search Library · Capture saves memories & unlocks adventures
           </Text>
         )}
       </View>

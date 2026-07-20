@@ -4,13 +4,17 @@ import type { Adventure } from "@/domain/adventure/types";
 import type { Memory } from "@/domain/memory/types";
 
 export type AdventureBoard = {
-  unlocked: Adventure[];
+  newAdventures: Adventure[];
   continueAdventure: Adventure[];
   completed: Adventure[];
   suggested: Adventure[];
   recentlyUnlocked: Adventure[];
 };
 
+/**
+ * Adventures domain — personalized learning from real-world discoveries only.
+ * Never unlocks from Library search or manual creation.
+ */
 export class AdventureService {
   constructor(private readonly repository: AdventureRepository) {}
 
@@ -27,8 +31,7 @@ export class AdventureService {
   }
 
   /**
-   * Generates adventures from discovery/memory data via blueprints.
-   * Skips kinds already unlocked for this memory.
+   * Unlock adventures after a Memory is created from a real-world capture.
    */
   async unlockFromMemory(memory: Memory): Promise<Adventure[]> {
     const existing = await this.repository.getByMemoryId(memory.id);
@@ -69,21 +72,22 @@ export class AdventureService {
 
   async getBoard(): Promise<AdventureBoard> {
     const all = await this.repository.getAll();
-    const unlocked = all.filter((item) => item.status === "unlocked");
-    const continueAdventure = all.filter((item) => item.status === "in_progress");
+    const newAdventures = all.filter((item) => item.status === "unlocked");
+    const continueAdventure = all.filter(
+      (item) => item.status === "in_progress",
+    );
     const completed = all.filter((item) => item.status === "completed");
-    const recentlyUnlocked = [...unlocked]
+    const recentlyUnlocked = [...newAdventures]
       .sort(
         (a, b) =>
           new Date(b.unlockedAt).getTime() - new Date(a.unlockedAt).getTime(),
       )
       .slice(0, 6);
 
-    // Suggested = unlocked adventures not yet started, beyond the most recent batch
-    const suggested = unlocked.slice(3);
+    const suggested = newAdventures.slice(3);
 
     return {
-      unlocked,
+      newAdventures,
       continueAdventure,
       completed,
       suggested,

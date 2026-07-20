@@ -19,9 +19,7 @@ export class AdventureRepository {
     return this.adventures.filter((item) => item.memoryId === memoryId);
   }
 
-  async createMany(
-    items: Omit<Adventure, "id">[],
-  ): Promise<Adventure[]> {
+  async createMany(items: Omit<Adventure, "id">[]): Promise<Adventure[]> {
     const created = items.map((item) => ({
       ...item,
       id: createId("adv"),
