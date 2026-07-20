@@ -3,39 +3,26 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 /**
- * Celebration after a real-world Memory is saved.
- * Adventures unlock from this capture — Library search never reaches here.
+ * Decision screen after a discovery is permanently saved.
+ * Celebrate Now → short celebration → Learning Card
+ * Continue Exploring → back to Discover with a lightweight toast
  */
-export default function CelebrateScreen() {
+export default function DiscoverySavedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { memories, lastCapture, celebrateMemory, adventureBoard } = useApp();
+  const { memories, lastCapture, continueExploring } = useApp();
 
   const memory = useMemo(
     () => memories.find((item) => item.id === id) ?? lastCapture?.memory ?? null,
     [id, lastCapture?.memory, memories],
   );
 
-  const unlockedCount =
-    lastCapture?.memory.id === id
-      ? lastCapture.adventures.length
-      : adventureBoard.recentlyUnlocked.filter(
-          (item) => item.memoryId === id,
-        ).length;
-
-  const firstAdventureId =
-    lastCapture?.memory.id === id
-      ? lastCapture.adventures[0]?.id
-      : adventureBoard.recentlyUnlocked.find((item) => item.memoryId === id)?.id;
-
-  const markCelebrated = async () => {
-    if (memory) await celebrateMemory(memory.id);
-  };
+  const name = memory?.objectName ?? "Discovery";
 
   return (
     <View style={styles.root}>
@@ -48,57 +35,49 @@ export default function CelebrateScreen() {
           styles.content,
           {
             paddingTop: insets.top + 36,
-            paddingBottom: insets.bottom + 24,
+            paddingBottom: insets.bottom + 28,
           },
         ]}
       >
-        <Text style={styles.party}>🎉</Text>
-        <Text style={styles.eyebrow}>You discovered...</Text>
-        <Text style={styles.title}>{memory?.objectName ?? "Discovery"}</Text>
+        <Text style={styles.badge}>✓ Saved to Adventure Book</Text>
+        <Text style={styles.eyebrow}>Great Discovery!</Text>
+        <Text style={styles.title}>You found a {name}!</Text>
         <Text style={styles.body}>
-          {unlockedCount > 0
-            ? `Adventure unlocked! ${unlockedCount} learning adventure${unlockedCount === 1 ? "" : "s"} ready to explore.`
-            : "Saved forever in Adventure Book."}
+          Your discovery has been saved. Would you like to celebrate it now or
+          continue exploring?
+        </Text>
+        <Text style={styles.support}>
+          Real life comes first — you can always open this later in Adventure
+          Book.
         </Text>
 
         <Pressable
           style={styles.primary}
           onPress={() => {
-            void (async () => {
-              await markCelebrated();
-              if (firstAdventureId) {
-                router.replace(`/adventure/${firstAdventureId}`);
-              } else {
-                router.replace("/(tabs)/adventures");
-              }
-            })();
+            if (!memory?.id) return;
+            // Push (not replace) so the stack stays coherent; Learning Card
+            // Back goes to Discover via replace("/(tabs)").
+            router.push({
+              pathname: "/learning/[id]",
+              params: { id: memory.id, celebrate: "1" },
+            });
           }}
         >
-          <Text style={styles.primaryText}>Continue Adventure</Text>
+          <Text style={styles.primaryText}>🎉 Celebrate Now</Text>
         </Pressable>
 
         <Pressable
           style={styles.secondary}
           onPress={() => {
-            void (async () => {
-              await markCelebrated();
+            if (!memory) {
               router.replace("/");
-            })();
+              return;
+            }
+            continueExploring(memory.objectName);
+            router.replace("/");
           }}
         >
-          <Text style={styles.secondaryText}>Keep Exploring</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.tertiary}
-          onPress={() => {
-            void (async () => {
-              await markCelebrated();
-              router.replace("/(tabs)/adventure-book");
-            })();
-          }}
-        >
-          <Text style={styles.tertiaryText}>View Adventure Book</Text>
+          <Text style={styles.secondaryText}>Continue Exploring</Text>
         </Pressable>
       </View>
     </View>
@@ -111,10 +90,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: space.lg,
     justifyContent: "center",
-    gap: 14,
+    gap: 12,
   },
-  party: {
-    fontSize: 40,
+  badge: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.mossDeep,
+    backgroundColor: colors.pastelGreen,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
     marginBottom: 4,
   },
   eyebrow: {
@@ -126,16 +113,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: 48,
-    lineHeight: 54,
+    fontSize: 40,
+    lineHeight: 46,
     color: colors.ink,
   },
   body: {
     fontFamily: fonts.body,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 26,
     color: colors.inkMuted,
-    marginBottom: 8,
+    marginTop: 4,
+  },
+  support: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.inkSoft,
+    marginBottom: 10,
   },
   primary: {
     backgroundColor: colors.orange,
@@ -150,23 +144,12 @@ const styles = StyleSheet.create({
     color: colors.surfaceRaised,
   },
   secondary: {
-    backgroundColor: colors.moss,
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  secondaryText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 17,
-    color: colors.surfaceRaised,
-  },
-  tertiary: {
     backgroundColor: colors.mossSoft,
     borderRadius: 18,
     paddingVertical: 16,
     alignItems: "center",
   },
-  tertiaryText: {
+  secondaryText: {
     fontFamily: fonts.displaySemi,
     fontSize: 17,
     color: colors.mossDeep,

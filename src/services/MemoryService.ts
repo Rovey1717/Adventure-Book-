@@ -1,5 +1,6 @@
 import type { MemoryRepository } from "@/data/memory/MemoryRepository";
 import type { Discovery } from "@/domain/discovery/types";
+import type { LearningCardSnapshot, LearningViewStatus } from "@/domain/learning/card";
 import type { Memory } from "@/domain/memory/types";
 import {
   categoryForObject,
@@ -41,6 +42,8 @@ export class MemoryService {
         locationLabel: discovery.locationLabel ?? existing.locationLabel,
         discoveryCount: existing.discoveryCount + 1,
         celebrationStatus: "pending",
+        learningViewStatus: "never_viewed",
+        unlockPresented: false,
         category,
       });
     }
@@ -58,6 +61,18 @@ export class MemoryService {
 
   markCelebrated(id: string) {
     return this.repository.update(id, { celebrationStatus: "celebrated" });
+  }
+
+  setLearningCard(id: string, learningCard: LearningCardSnapshot) {
+    return this.repository.update(id, { learningCard });
+  }
+
+  setLearningViewStatus(id: string, learningViewStatus: LearningViewStatus) {
+    return this.repository.update(id, { learningViewStatus });
+  }
+
+  markUnlockPresented(id: string) {
+    return this.repository.update(id, { unlockPresented: true });
   }
 
   toggleFavorite(id: string, isFavorite: boolean) {

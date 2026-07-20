@@ -53,6 +53,20 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="learning/[id]"
+          options={{
+            presentation: "fullScreenModal",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="adventure-unlock/[id]"
+          options={{
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="memory/[id]"
           options={{
             headerShown: false,

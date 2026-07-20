@@ -29,14 +29,14 @@ import { DiscoverSearchBar } from "@/components/discover/DiscoverSearchBar";
 import { DiscoverSearchResults } from "@/components/discover/DiscoverSearchResults";
 import { ProcessingOverlay } from "@/components/discover/ProcessingOverlay";
 import { ShutterButton } from "@/components/discover/ShutterButton";
+import { SavedToast } from "@/components/discovery/SavedToast";
 import { colors, fonts } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { LibraryEntry } from "@/domain/library/types";
 
 /**
- * Discover hosts two journeys:
- * A) Camera capture → Memory → Adventure Book
- * B) Library search → Discovery card → Learning (no memory)
+ * Discover — real life comes first.
+ * Capture → name → save immediately → Celebrate Now | Continue Exploring
  */
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
@@ -49,6 +49,8 @@ export default function DiscoverScreen() {
     captureVideo,
     captureVoice,
     library,
+    savedToast,
+    clearSavedToast,
   } = useApp();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
@@ -122,7 +124,7 @@ export default function DiscoverScreen() {
     router.push("/name-discovery");
   }, [router]);
 
-  const goCelebrate = useCallback(
+  const goDecision = useCallback(
     (memoryId: string) => {
       router.push(`/celebrate/${memoryId}`);
     },
@@ -154,7 +156,7 @@ export default function DiscoverScreen() {
 
     if (Platform.OS === "web" || !cameraRef.current) {
       const result = await captureVideo(`mock-video://${Date.now()}`);
-      goCelebrate(result.memory.id);
+      goDecision(result.memory.id);
       return;
     }
 
@@ -163,12 +165,12 @@ export default function DiscoverScreen() {
       const video = await cameraRef.current.recordAsync({ maxDuration: 30 });
       if (video?.uri) {
         const result = await captureVideo(video.uri);
-        goCelebrate(result.memory.id);
+        goDecision(result.memory.id);
       }
     } finally {
       setIsRecordingVideo(false);
     }
-  }, [captureVideo, ensurePermissions, goCelebrate, isRecordingVideo]);
+  }, [captureVideo, ensurePermissions, goDecision, isRecordingVideo]);
 
   const toggleVoice = useCallback(async () => {
     const ready = await ensurePermissions();
@@ -178,7 +180,7 @@ export default function DiscoverScreen() {
       await audioRecorder.stop();
       const uri = audioRecorder.uri ?? `mock-voice://${Date.now()}`;
       const result = await captureVoice(uri);
-      goCelebrate(result.memory.id);
+      goDecision(result.memory.id);
       return;
     }
 
@@ -188,7 +190,7 @@ export default function DiscoverScreen() {
     audioRecorder,
     captureVoice,
     ensurePermissions,
-    goCelebrate,
+    goDecision,
     isRecordingVoice,
   ]);
 
@@ -340,6 +342,13 @@ export default function DiscoverScreen() {
         visible={isProcessing}
         message="Saving your discovery…"
       />
+
+      {savedToast ? (
+        <SavedToast
+          message={savedToast.message}
+          onDone={clearSavedToast}
+        />
+      ) : null}
     </View>
   );
 }

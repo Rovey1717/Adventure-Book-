@@ -29,7 +29,8 @@ export type NamedDiscoveryLabel = {
  * Library is intentionally never touched here.
  *
  * Capture flow (only path that creates progress):
- *   capture → name → Memory → unlock Adventures → update Journey → Adventure Book
+ *   capture → name → Memory (saved immediately) → Learning Adventure (background)
+ *   → Decision: Celebrate Now | Continue Exploring
  *
  * Search / Library is a separate knowledge path and must never call this service
  * for memories, adventures, or journey updates.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,28 +9,25 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import type { Adventure } from "@/domain/adventure/types";
 import type { Memory } from "@/domain/memory/types";
 import { accentForCategory } from "@/domain/shared/categories";
 
+/**
+ * Adventure Book memory entry — opens the same Learning Card as Celebrate Now.
+ */
 export default function MemoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { getMemory, getAdventuresForMemory, toggleFavorite } = useApp();
+  const { getMemory, toggleFavorite, openLearningFromBook } = useApp();
   const [memory, setMemory] = useState<Memory | null>(null);
-  const [adventures, setAdventures] = useState<Adventure[]>([]);
 
   const load = useCallback(async () => {
     if (!id) return;
-    const next = await getMemory(id);
-    setMemory(next);
-    if (next) {
-      setAdventures(await getAdventuresForMemory(next.id));
-    }
-  }, [getAdventuresForMemory, getMemory, id]);
+    setMemory(await getMemory(id));
+  }, [getMemory, id]);
 
   useEffect(() => {
     void load();
@@ -44,6 +42,14 @@ export default function MemoryDetailScreen() {
   }
 
   const accent = accentForCategory(memory.category);
+  const showPhoto =
+    !!memory.photoUri && !memory.photoUri.startsWith("mock-");
+  const statusLabel =
+    memory.learningViewStatus === "completed"
+      ? "Learning completed"
+      : memory.learningViewStatus === "viewed"
+        ? "Learning started"
+        : "Ready to celebrate";
 
   return (
     <ScrollView
@@ -52,12 +58,22 @@ export default function MemoryDetailScreen() {
         paddingBottom: insets.bottom + 32,
       }}
     >
-      <View style={[styles.hero, { backgroundColor: accent, paddingTop: insets.top + 12 }]}>
+      <View
+        style={[
+          styles.hero,
+          { backgroundColor: accent, paddingTop: insets.top + 12 },
+        ]}
+      >
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+        {showPhoto ? (
+          <Image source={{ uri: memory.photoUri! }} style={styles.heroPhoto} />
+        ) : (
+          <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+        )}
         <Text style={styles.heroTitle}>{memory.objectName}</Text>
+        <Text style={styles.heroMeta}>{statusLabel}</Text>
       </View>
 
       <View style={styles.body}>
@@ -67,9 +83,21 @@ export default function MemoryDetailScreen() {
         </Text>
         <Text style={styles.meta}>
           Discovered {memory.discoveryCount} time
-          {memory.discoveryCount === 1 ? "" : "s"} · {memory.adventuresCompleted}{" "}
-          adventures completed
+          {memory.discoveryCount === 1 ? "" : "s"}
         </Text>
+
+        <Pressable
+          style={styles.primary}
+          onPress={() => {
+            router.push(openLearningFromBook(memory.id));
+          }}
+        >
+          <Text style={styles.primaryText}>
+            {memory.learningViewStatus === "never_viewed"
+              ? "🎉 Celebrate & Learn"
+              : "Open Learning Card"}
+          </Text>
+        </Pressable>
 
         <Pressable
           style={styles.favorite}
@@ -85,27 +113,8 @@ export default function MemoryDetailScreen() {
           </Text>
         </Pressable>
 
-        <Text style={styles.section}>Completed adventures</Text>
-        {adventures.length === 0 ? (
-          <Text style={styles.meta}>No adventures unlocked yet.</Text>
-        ) : (
-          adventures.map((adventure) => (
-            <Text key={adventure.id} style={styles.adventure}>
-              {adventure.status === "completed" ? "✓ " : "○ "}
-              {adventure.title}
-            </Text>
-          ))
-        )}
-
-        <Text style={styles.section}>Notes</Text>
-        <Text style={styles.meta}>
-          {memory.notes ?? "Family notes will live here."}
-        </Text>
-
-        <Text style={styles.section}>AI story</Text>
-        <Text style={styles.meta}>
-          {memory.story ?? "A personalized story will appear here in a future update."}
-        </Text>
+        <Text style={styles.section}>Saved status</Text>
+        <Text style={styles.meta}>✓ Forever in Adventure Book</Text>
       </View>
     </ScrollView>
   );
@@ -126,6 +135,12 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 8,
   },
+  heroPhoto: {
+    width: "100%",
+    height: 220,
+    borderRadius: 18,
+    marginTop: 8,
+  },
   back: {
     alignSelf: "flex-start",
     paddingVertical: 8,
@@ -145,6 +160,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     color: colors.surfaceRaised,
   },
+  heroMeta: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.85)",
+  },
   body: {
     padding: space.screen,
     gap: 8,
@@ -154,6 +174,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.inkMuted,
     lineHeight: 22,
+  },
+  primary: {
+    backgroundColor: colors.orange,
+    borderRadius: radii.lg,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  primaryText: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 17,
+    color: colors.surfaceRaised,
   },
   favorite: {
     alignSelf: "flex-start",
@@ -172,11 +204,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.ink,
     marginTop: 16,
-  },
-  adventure: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 15,
-    color: colors.ink,
-    paddingVertical: 4,
   },
 });

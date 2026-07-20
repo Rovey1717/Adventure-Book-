@@ -1,4 +1,5 @@
 import type { CreateMemoryInput, Memory } from "@/domain/memory/types";
+import type { LearningCardSnapshot, LearningViewStatus } from "@/domain/learning/card";
 import { createId } from "@/domain/shared/ids";
 
 export class MemoryRepository {
@@ -37,6 +38,9 @@ export class MemoryRepository {
       adventuresCompleted: 0,
       isFavorite: false,
       celebrationStatus: "pending",
+      learningViewStatus: "never_viewed",
+      learningCard: null,
+      unlockPresented: false,
       notes: null,
       story: null,
     };
@@ -63,3 +67,5 @@ export class MemoryRepository {
 }
 
 export const memoryRepository = new MemoryRepository();
+
+export type { LearningCardSnapshot, LearningViewStatus };

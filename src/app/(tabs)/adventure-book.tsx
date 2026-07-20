@@ -53,8 +53,11 @@ function MemoryCard({
           <Text style={styles.meta}>{memory.locationLabel}</Text>
         ) : null}
         <Text style={styles.stats}>
-          {memory.adventuresCompleted} adventure
-          {memory.adventuresCompleted === 1 ? "" : "s"} completed
+          {memory.learningViewStatus === "completed"
+            ? "Learning completed"
+            : memory.learningViewStatus === "viewed"
+              ? "Learning started"
+              : "Saved · ready to celebrate"}
         </Text>
         <View style={styles.flags}>
           {memory.isFavorite ? (
@@ -97,7 +100,7 @@ export default function AdventureBookScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>Adventure Book</Text>
         <Text style={styles.subheading}>
-          Your family's living scrapbook of real-world memories
+          Every real-world discovery — celebrate now or come back anytime
         </Text>
       </View>
 
@@ -105,8 +108,8 @@ export default function AdventureBookScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No memories yet</Text>
           <Text style={styles.emptyBody}>
-            Capture something outside in Discover — it will appear here as a
-            memory, never in the Library.
+            Take a picture in Discover. It saves here immediately — even if you
+            keep exploring.
           </Text>
         </View>
       ) : (

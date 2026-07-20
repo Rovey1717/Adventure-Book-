@@ -1,17 +1,22 @@
 /**
- * Domain boundaries for Adventure Book MVP.
+ * Adventure Book — discovery-first product architecture (MVP).
  *
- * Discovery  — capture events (photo / video / voice)
- * Memory     — personal scrapbook entries in Adventure Book
- * Adventure  — personalized learning unlocked ONLY from Memories
- * Journey    — long-term progress & motivation
- * Library    — universal encyclopedia (no memories, no adventures, no journey)
- * Parent     — family management
- * Graph      — WorldGraph / LearningGraph / ChildKnowledgeGraph / Recommendations
- *              (Garden is the first ecosystem; engines stay ecosystem-agnostic)
+ * PRINCIPLE
+ * Real life comes first. Every discovery saves immediately.
+ * Families choose Celebrate Now or Continue Exploring — never forced to stop.
  *
- * These domains stay independent. AI recognition / generation can plug into
- * Discovery (suggestions) and Adventure (personalization) later without
- * merging Library into Adventure Book.
+ * USER FLOW
+ * Discover → Name → Save (Adventure Book + Learning Adventure background)
+ *   → Decision: Celebrate Now | Continue Exploring
+ * Celebrate Now → short celebration → Learning Card
+ * Continue Exploring → Discover + lightweight toast
+ * Adventure Book later → same Learning Card (celebration only if never viewed)
+ *
+ * Learning Card is modular (hero, fact, quiz, wonder, challenge, progress…).
+ * Future modules (video, story, song, AR…) plug in without redesigning the UI.
+ *
+ * INTERNAL SYSTEMS
+ * World / Learning Graph · Library (encyclopedia) · Recommendation Engine
+ * Adventure unlocks · Memory Graph
  */
 export {};

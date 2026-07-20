@@ -1,5 +1,9 @@
-import type { MemoryCategory } from "@/domain/shared/categories";
 import type { GeoLocation } from "@/domain/discovery/types";
+import type {
+  LearningCardSnapshot,
+  LearningViewStatus,
+} from "@/domain/learning/card";
+import type { MemoryCategory } from "@/domain/shared/categories";
 
 export type CelebrationStatus = "pending" | "celebrated";
 
@@ -17,6 +21,12 @@ export type Memory = {
   adventuresCompleted: number;
   isFavorite: boolean;
   celebrationStatus: CelebrationStatus;
+  /** Has the family opened the Learning Card / finished it? */
+  learningViewStatus: LearningViewStatus;
+  /** Modular Learning Card generated after save. */
+  learningCard: LearningCardSnapshot | null;
+  /** Whether the post-learning unlock screen was shown. */
+  unlockPresented: boolean;
   notes: string | null;
   story: string | null;
 };

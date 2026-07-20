@@ -69,7 +69,7 @@ export default function NameDiscoveryScreen() {
     return library.search(trimmed).slice(0, 6);
   }, [library, name]);
 
-  const goCelebrate = useCallback(
+  const goDecision = useCallback(
     (memoryId: string) => {
       router.replace(`/celebrate/${memoryId}`);
     },
@@ -86,8 +86,8 @@ export default function NameDiscoveryScreen() {
     const objectName = name.trim();
     if (!objectName) return;
     const result = await confirmNamedDiscovery({ objectName, category });
-    goCelebrate(result.memory.id);
-  }, [category, confirmNamedDiscovery, goCelebrate, name]);
+    goDecision(result.memory.id);
+  }, [category, confirmNamedDiscovery, goDecision, name]);
 
   const onPickSuggestion = useCallback((entry: LibraryEntry) => {
     setName(entry.title);
@@ -137,8 +137,8 @@ export default function NameDiscoveryScreen() {
           <Text style={styles.eyebrow}>New discovery</Text>
           <Text style={styles.title}>Name Your Discovery</Text>
           <Text style={styles.support}>
-            Tell Adventure Book what you found — then adventures unlock from
-            that name.
+            Name what you found — it saves to Adventure Book right away. Then
+            you can celebrate now or keep exploring.
           </Text>
 
           {showPreview ? (
@@ -198,7 +198,7 @@ export default function NameDiscoveryScreen() {
               void onContinue();
             }}
           >
-            <Text style={styles.primaryText}>Continue</Text>
+            <Text style={styles.primaryText}>Save Discovery</Text>
           </Pressable>
 
           <Pressable

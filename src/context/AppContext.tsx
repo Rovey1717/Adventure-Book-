@@ -25,6 +25,7 @@ import { DiscoveryJourneyService } from "@/services/DiscoveryJourneyService";
 import { DiscoveryService } from "@/services/DiscoveryService";
 import { JourneyService } from "@/services/JourneyService";
 import { LibraryService } from "@/services/LibraryService";
+import { LearningAdventureService } from "@/services/learning/LearningAdventureService";
 import { LearningGraphService } from "@/services/graph/LearningGraphService";
 
 const discoveryService = new DiscoveryService(discoveryRepository);
@@ -40,13 +41,17 @@ const libraryService = new LibraryService(
   libraryRepository,
   learningGraphService,
 );
+const learningAdventureService = new LearningAdventureService(
+  libraryService,
+  learningGraphService,
+);
 
 /**
- * RecognitionService lives ready for a future optional enhancement.
- * MVP discovery never calls it — families name discoveries manually.
+ * RecognitionService is reserved for a future enhancement.
+ * MVP: families name discoveries manually.
  *
- * Learning Graph (Garden) powers Discover search, related discoveries,
- * and next-adventure recommendations — independent of Adventure unlock rules.
+ * Discovery flow: save immediately → Celebrate Now | Continue Exploring
+ * Learning Card is reusable from Adventure Book.
  */
 const journeyOrchestrator = new DiscoveryJourneyService(
   discoveryService,
@@ -56,6 +61,8 @@ const journeyOrchestrator = new DiscoveryJourneyService(
   null,
 );
 
+type SavedToastState = { message: string } | null;
+
 type AppContextValue = {
   memories: Memory[];
   adventureBoard: AdventureBoard;
@@ -63,6 +70,7 @@ type AppContextValue = {
   isProcessing: boolean;
   lastCapture: CaptureResult | null;
   pendingDiscovery: PendingDiscovery | null;
+  savedToast: SavedToastState;
   library: LibraryService;
   learningGraph: LearningGraphService;
   refresh: () => Promise<void>;
@@ -71,6 +79,19 @@ type AppContextValue = {
   clearPendingDiscovery: () => void;
   captureVideo: (uri: string) => Promise<CaptureResult>;
   captureVoice: (uri: string) => Promise<CaptureResult>;
+  continueExploring: (objectName: string) => void;
+  clearSavedToast: () => void;
+  ensureLearningCard: (memoryId: string) => Promise<Memory | null>;
+  markLearningViewed: (memoryId: string) => Promise<void>;
+  completeLearningCard: (
+    memoryId: string,
+  ) => Promise<{
+    id: string;
+    title: string;
+    emoji: string;
+    subtitle: string;
+  } | null>;
+  markUnlockSeen: (memoryId: string) => Promise<void>;
   celebrateMemory: (memoryId: string) => Promise<void>;
   toggleFavorite: (memoryId: string) => Promise<void>;
   startAdventure: (adventureId: string) => Promise<void>;
@@ -78,6 +99,10 @@ type AppContextValue = {
   getAdventuresForMemory: (memoryId: string) => Promise<
     Awaited<ReturnType<AdventureService["getByMemoryId"]>>
   >;
+  openLearningFromBook: (memoryId: string) => {
+    pathname: "/learning/[id]";
+    params: { id: string; celebrate?: string };
+  };
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -99,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastCapture, setLastCapture] = useState<CaptureResult | null>(null);
   const [pendingDiscovery, setPendingDiscovery] =
     useState<PendingDiscovery | null>(null);
+  const [savedToast, setSavedToast] = useState<SavedToastState>(null);
 
   const refresh = useCallback(async () => {
     const [nextMemories, board, snapshot] = await Promise.all([
@@ -118,19 +144,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setJourney(snapshot);
   }, []);
 
+  const attachLearningCard = useCallback(async (memory: Memory) => {
+    const names = (await memoryService.list()).map((item) => item.objectName);
+    const card = learningAdventureService.generateForMemory(memory, names);
+    return memoryService.setLearningCard(memory.id, card);
+  }, []);
+
   const runCapture = useCallback(
     async (work: () => Promise<CaptureResult>) => {
       setIsProcessing(true);
       try {
         const result = await work();
-        setLastCapture(result);
+        // Generate Learning Adventure in the background immediately after save.
+        const withCard = await attachLearningCard(result.memory);
+        const nextResult = { ...result, memory: withCard };
+        setLastCapture(nextResult);
         await refresh();
-        return result;
+        return nextResult;
       } finally {
         setIsProcessing(false);
       }
     },
-    [refresh],
+    [attachLearningCard, refresh],
   );
 
   const beginPhotoDiscovery = useCallback((uri: string) => {
@@ -170,6 +205,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [runCapture],
   );
 
+  const continueExploring = useCallback((objectName: string) => {
+    setSavedToast({
+      message: `${objectName} saved to Adventure Book`,
+    });
+  }, []);
+
+  const clearSavedToast = useCallback(() => {
+    setSavedToast(null);
+  }, []);
+
+  const ensureLearningCard = useCallback(
+    async (memoryId: string) => {
+      const memory = await memoryService.getById(memoryId);
+      if (!memory) return null;
+      if (memory.learningCard) return memory;
+      const updated = await attachLearningCard(memory);
+      await refresh();
+      return updated;
+    },
+    [attachLearningCard, refresh],
+  );
+
+  const markLearningViewed = useCallback(
+    async (memoryId: string) => {
+      await memoryService.markCelebrated(memoryId);
+      const memory = await memoryService.getById(memoryId);
+      if (memory && memory.learningViewStatus === "never_viewed") {
+        await memoryService.setLearningViewStatus(memoryId, "viewed");
+      }
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const completeLearningCard = useCallback(
+    async (memoryId: string) => {
+      const memory = await memoryService.getById(memoryId);
+      if (!memory) return null;
+      await memoryService.setLearningViewStatus(memoryId, "completed");
+      await memoryService.setAdventuresCompleted(
+        memoryId,
+        Math.max(1, memory.adventuresCompleted),
+      );
+      await refresh();
+      if (memory.unlockPresented) return null;
+      return memory.learningCard?.unlockCandidate ?? null;
+    },
+    [refresh],
+  );
+
+  const markUnlockSeen = useCallback(
+    async (memoryId: string) => {
+      await memoryService.markUnlockPresented(memoryId);
+      await refresh();
+    },
+    [refresh],
+  );
+
   const celebrateMemory = useCallback(
     async (memoryId: string) => {
       await memoryService.markCelebrated(memoryId);
@@ -203,6 +296,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const openLearningFromBook = useCallback((memoryId: string) => {
+    const memory = memories.find((item) => item.id === memoryId);
+    const playCelebration =
+      !memory || memory.learningViewStatus === "never_viewed";
+    return {
+      pathname: "/learning/[id]" as const,
+      params: playCelebration
+        ? { id: memoryId, celebrate: "1" }
+        : { id: memoryId },
+    };
+  }, [memories]);
+
   const value = useMemo<AppContextValue>(
     () => ({
       memories,
@@ -211,6 +316,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isProcessing,
       lastCapture,
       pendingDiscovery,
+      savedToast,
       library: libraryService,
       learningGraph: learningGraphService,
       refresh,
@@ -219,11 +325,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearPendingDiscovery,
       captureVideo,
       captureVoice,
+      continueExploring,
+      clearSavedToast,
+      ensureLearningCard,
+      markLearningViewed,
+      completeLearningCard,
+      markUnlockSeen,
       celebrateMemory,
       toggleFavorite,
       startAdventure,
       getMemory,
       getAdventuresForMemory,
+      openLearningFromBook,
     }),
     [
       memories,
@@ -232,17 +345,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isProcessing,
       lastCapture,
       pendingDiscovery,
+      savedToast,
       refresh,
       beginPhotoDiscovery,
       confirmNamedDiscovery,
       clearPendingDiscovery,
       captureVideo,
       captureVoice,
+      continueExploring,
+      clearSavedToast,
+      ensureLearningCard,
+      markLearningViewed,
+      completeLearningCard,
+      markUnlockSeen,
       celebrateMemory,
       toggleFavorite,
       startAdventure,
       getMemory,
       getAdventuresForMemory,
+      openLearningFromBook,
     ],
   );
 
