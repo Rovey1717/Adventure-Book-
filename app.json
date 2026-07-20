@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AdventureBook",
+    "name": "Adventure Book",
     "slug": "AdventureBook",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,9 +11,9 @@
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.rovey.AdventureBook",
       "infoPlist": {
-        "NSCameraUsageDescription": "AdventureBook uses the camera so families can capture real-world discoveries together.",
-        "NSMicrophoneUsageDescription": "AdventureBook uses the microphone for video and voice memo discoveries.",
-        "NSLocationWhenInUseUsageDescription": "AdventureBook can save where a discovery happened."
+        "NSCameraUsageDescription": "Adventure Book uses the camera so families can capture real-world discoveries together.",
+        "NSMicrophoneUsageDescription": "Adventure Book uses the microphone for video and voice memo discoveries.",
+        "NSLocationWhenInUseUsageDescription": "Adventure Book can save where a discovery happened."
       }
     },
     "android": {
@@ -49,8 +49,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AdventureBook to access your camera for discoveries.",
-          "microphonePermission": "Allow AdventureBook to access your microphone for video and voice discoveries.",
+          "cameraPermission": "Allow Adventure Book to access your camera for discoveries.",
+          "microphonePermission": "Allow Adventure Book to access your microphone for video and voice discoveries.",
           "recordAudioAndroid": true,
           "barcodeScannerEnabled": false
         }
@@ -58,7 +58,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow AdventureBook to access your microphone for voice memo discoveries.",
+          "microphonePermission": "Allow Adventure Book to access your microphone for voice memo discoveries.",
           "recordAudioAndroid": true,
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
@@ -67,7 +67,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow AdventureBook to save where discoveries happen."
+          "locationWhenInUsePermission": "Allow Adventure Book to save where discoveries happen."
         }
       ]
     ],

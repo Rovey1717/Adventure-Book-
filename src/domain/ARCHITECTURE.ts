@@ -1,5 +1,5 @@
 /**
- * Domain boundaries for AdventureBook MVP.
+ * Domain boundaries for Adventure Book MVP.
  *
  * Discovery  — capture events (photo / video / voice)
  * Memory     — personal scrapbook entries in Adventure Book

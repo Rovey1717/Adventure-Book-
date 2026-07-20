@@ -223,7 +223,7 @@ export default function DiscoverScreen() {
       <View style={[styles.root, styles.permission]}>
         <Text style={styles.permissionTitle}>Camera unlocks Discover</Text>
         <Text style={styles.permissionBody}>
-          AdventureBook needs the camera so families can capture the real world
+          Adventure Book needs the camera so families can capture the real world
           together. You can still search the Library to learn anytime.
         </Text>
         <Pressable
@@ -264,7 +264,7 @@ export default function DiscoverScreen() {
       />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.brand}>AdventureBook</Text>
+        <Text style={styles.brand}>Adventure Book</Text>
         <DiscoverSearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
