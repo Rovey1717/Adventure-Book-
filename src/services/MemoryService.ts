@@ -1,7 +1,10 @@
 import type { MemoryRepository } from "@/data/memory/MemoryRepository";
 import type { Discovery } from "@/domain/discovery/types";
 import type { Memory } from "@/domain/memory/types";
-import { categoryForObject } from "@/domain/shared/categories";
+import {
+  categoryForObject,
+  type MemoryCategory,
+} from "@/domain/shared/categories";
 
 export class MemoryService {
   constructor(private readonly repository: MemoryRepository) {}
@@ -17,11 +20,17 @@ export class MemoryService {
   /**
    * Creates or strengthens a scrapbook memory from a discovery.
    * Re-discovering the same object increments discoveryCount.
+   * The family-provided name is the source of truth.
    */
-  async createFromDiscovery(discovery: Discovery): Promise<Memory> {
+  async createFromDiscovery(
+    discovery: Discovery,
+    categoryOverride?: MemoryCategory,
+  ): Promise<Memory> {
     const existing = await this.repository.findByObjectName(discovery.objectName);
     const photoUri =
       discovery.mediaType === "photo" ? discovery.mediaUri : existing?.photoUri ?? null;
+    const category =
+      categoryOverride ?? categoryForObject(discovery.objectName);
 
     if (existing) {
       return this.repository.update(existing.id, {
@@ -32,6 +41,7 @@ export class MemoryService {
         locationLabel: discovery.locationLabel ?? existing.locationLabel,
         discoveryCount: existing.discoveryCount + 1,
         celebrationStatus: "pending",
+        category,
       });
     }
 
@@ -42,7 +52,7 @@ export class MemoryService {
       discoveredAt: discovery.createdAt,
       location: discovery.location,
       locationLabel: discovery.locationLabel,
-      category: categoryForObject(discovery.objectName),
+      category,
     });
   }
 

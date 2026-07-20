@@ -1,8 +1,5 @@
 import type { DiscoveryRepository } from "@/data/discovery/DiscoveryRepository";
-import {
-  objectNameForMedia,
-  recognizeObjectFromPhoto,
-} from "@/domain/discovery/recognition";
+import { objectNameForMedia } from "@/domain/discovery/recognition";
 import type {
   Discovery,
   DiscoveryMediaType,
@@ -36,6 +33,10 @@ async function defaultLocationProvider() {
   }
 }
 
+/**
+ * Creates discoveries from confirmed labels.
+ * Recognition / vision analysis belongs in RecognitionService — not here.
+ */
 export class DiscoveryService {
   constructor(
     private readonly repository: DiscoveryRepository,
@@ -50,14 +51,16 @@ export class DiscoveryService {
     return this.repository.getById(id);
   }
 
-  async capturePhoto(mediaUri: string): Promise<Discovery> {
-    const [objectName, place] = await Promise.all([
-      recognizeObjectFromPhoto(mediaUri),
-      this.getLocation(),
-    ]);
-
+  /**
+   * Persist a photo discovery after the family confirms (or corrects) the label.
+   */
+  async createPhotoDiscovery(
+    mediaUri: string,
+    objectName: string,
+  ): Promise<Discovery> {
+    const place = await this.getLocation();
     return this.repository.create({
-      objectName,
+      objectName: objectName.trim() || "Discovery",
       mediaType: "photo",
       mediaUri,
       location: place.location,

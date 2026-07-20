@@ -28,7 +28,8 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const cameraRef = useRef<CameraView>(null);
-  const { isProcessing, capturePhoto, captureVideo, captureVoice } = useApp();
+  const { isProcessing, beginPhotoDiscovery, captureVideo, captureVoice } =
+    useApp();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facing, setFacing] = useState<CameraType>("back");
@@ -70,6 +71,10 @@ export default function DiscoverScreen() {
     requestMicPermission,
   ]);
 
+  const goNameDiscovery = useCallback(() => {
+    router.push("/name-discovery");
+  }, [router]);
+
   const goCelebrate = useCallback(
     (memoryId: string) => {
       router.push(`/celebrate/${memoryId}`);
@@ -87,9 +92,9 @@ export default function DiscoverScreen() {
         : (await cameraRef.current.takePictureAsync({ quality: 0.85 }))?.uri;
 
     if (!uri) return;
-    const result = await capturePhoto(uri);
-    goCelebrate(result.memory.id);
-  }, [capturePhoto, ensurePermissions, goCelebrate]);
+    beginPhotoDiscovery(uri);
+    goNameDiscovery();
+  }, [beginPhotoDiscovery, ensurePermissions, goNameDiscovery]);
 
   const toggleVideo = useCallback(async () => {
     const ready = await ensurePermissions();
@@ -240,11 +245,7 @@ export default function DiscoverScreen() {
 
       <ProcessingOverlay
         visible={isProcessing}
-        message={
-          mode === "photo"
-            ? "Recognizing your discovery…"
-            : "Saving your discovery…"
-        }
+        message="Saving your discovery…"
       />
     </View>
   );

@@ -10,7 +10,12 @@ const COLLECTION_TITLES: Record<MemoryCategory, string> = {
   plants: "Plants",
   food: "Food",
   nature: "Nature",
+  ocean: "Ocean",
+  insects: "Insects",
   construction: "Construction",
+  buildings: "Buildings",
+  household: "Household",
+  landmarks: "Landmarks",
   other: "More",
 };
 

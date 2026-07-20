@@ -128,6 +128,68 @@ const ENTRIES: LibraryEntry[] = [
     hasSound: false,
     hasQuiz: true,
   },
+  {
+    id: "entry_lizard",
+    categoryId: "animals",
+    title: "Lizard",
+    pronunciation: "LIZ-urd",
+    facts: [
+      "Many lizards can drop their tails to escape.",
+      "Lizards love warm sunny rocks.",
+    ],
+    hasVideo: true,
+    hasSound: false,
+    hasQuiz: true,
+  },
+  {
+    id: "entry_bear",
+    categoryId: "animals",
+    title: "Bear",
+    pronunciation: "bair",
+    facts: [
+      "Bears have a strong sense of smell.",
+      "Some bears sleep through the coldest months.",
+    ],
+    hasVideo: true,
+    hasSound: true,
+    hasQuiz: true,
+  },
+  {
+    id: "entry_cat",
+    categoryId: "animals",
+    title: "Cat",
+    pronunciation: "kat",
+    facts: ["Cats purr when they feel safe.", "Cats can see well in dim light."],
+    hasVideo: true,
+    hasSound: true,
+    hasQuiz: true,
+  },
+  {
+    id: "entry_butterfly",
+    categoryId: "animals",
+    title: "Butterfly",
+    pronunciation: "BUT-ur-fly",
+    facts: [
+      "Butterflies taste with their feet.",
+      "A butterfly starts life as a caterpillar.",
+    ],
+    hasVideo: true,
+    hasSound: false,
+    hasQuiz: true,
+  },
+  {
+    id: "entry_train",
+    categoryId: "vehicles",
+    title: "Train",
+    pronunciation: "trayn",
+    facts: [
+      "Trains ride on metal tracks.",
+      "Some trains carry people; others carry cargo.",
+    ],
+    hasVideo: true,
+    hasSound: true,
+    hasQuiz: true,
+  },
 ];
 
 /** Encyclopedia content only — never stores personal discoveries. */

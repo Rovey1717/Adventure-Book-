@@ -10,16 +10,20 @@ import { adventureRepository } from "@/data/adventure/AdventureRepository";
 import { discoveryRepository } from "@/data/discovery/DiscoveryRepository";
 import { libraryRepository } from "@/data/library/LibraryRepository";
 import { memoryRepository } from "@/data/memory/MemoryRepository";
-import type { AdventureBoard } from "@/services/AdventureService";
-import { AdventureService } from "@/services/AdventureService";
-import type { CaptureResult } from "@/services/DiscoveryJourneyService";
-import { DiscoveryJourneyService } from "@/services/DiscoveryJourneyService";
-import { DiscoveryService } from "@/services/DiscoveryService";
+import type { PendingDiscovery } from "@/domain/discovery/pending";
 import type { JourneySnapshot } from "@/domain/journey/types";
 import type { Memory } from "@/domain/memory/types";
+import { MemoryService } from "@/services/MemoryService";
+import type { AdventureBoard } from "@/services/AdventureService";
+import { AdventureService } from "@/services/AdventureService";
+import type {
+  CaptureResult,
+  NamedDiscoveryLabel,
+} from "@/services/DiscoveryJourneyService";
+import { DiscoveryJourneyService } from "@/services/DiscoveryJourneyService";
+import { DiscoveryService } from "@/services/DiscoveryService";
 import { JourneyService } from "@/services/JourneyService";
 import { LibraryService } from "@/services/LibraryService";
-import { MemoryService } from "@/services/MemoryService";
 
 const discoveryService = new DiscoveryService(discoveryRepository);
 const memoryService = new MemoryService(memoryRepository);
@@ -30,11 +34,22 @@ const journeyService = new JourneyService(
   adventureRepository,
 );
 const libraryService = new LibraryService(libraryRepository);
+
+/**
+ * RecognitionService lives ready for a future optional enhancement.
+ * MVP discovery never calls it — families name discoveries manually.
+ *
+ * To enable AI suggestions later without changing capture → name → save:
+ *   1. Pass `new RecognitionService()` into DiscoveryJourneyService.
+ *   2. Call suggestNameForPending() before showing the Name screen.
+ *   3. Prefill the text input from pending.suggestedName.
+ */
 const journeyOrchestrator = new DiscoveryJourneyService(
   discoveryService,
   memoryService,
   adventureService,
   journeyService,
+  null,
 );
 
 type AppContextValue = {
@@ -43,9 +58,12 @@ type AppContextValue = {
   journey: JourneySnapshot | null;
   isProcessing: boolean;
   lastCapture: CaptureResult | null;
+  pendingDiscovery: PendingDiscovery | null;
   library: LibraryService;
   refresh: () => Promise<void>;
-  capturePhoto: (uri: string) => Promise<CaptureResult>;
+  beginPhotoDiscovery: (uri: string) => PendingDiscovery;
+  confirmNamedDiscovery: (label: NamedDiscoveryLabel) => Promise<CaptureResult>;
+  clearPendingDiscovery: () => void;
   captureVideo: (uri: string) => Promise<CaptureResult>;
   captureVoice: (uri: string) => Promise<CaptureResult>;
   celebrateMemory: (memoryId: string) => Promise<void>;
@@ -74,6 +92,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [journey, setJourney] = useState<JourneySnapshot | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastCapture, setLastCapture] = useState<CaptureResult | null>(null);
+  const [pendingDiscovery, setPendingDiscovery] =
+    useState<PendingDiscovery | null>(null);
 
   const refresh = useCallback(async () => {
     const [nextMemories, board, snapshot] = await Promise.all([
@@ -101,10 +121,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
-  const capturePhoto = useCallback(
-    (uri: string) => runCapture(() => journeyOrchestrator.capturePhoto(uri)),
-    [runCapture],
+  const beginPhotoDiscovery = useCallback((uri: string) => {
+    const pending = journeyOrchestrator.beginPhotoDiscovery(uri);
+    setPendingDiscovery(pending);
+    return pending;
+  }, []);
+
+  const confirmNamedDiscovery = useCallback(
+    (label: NamedDiscoveryLabel) =>
+      runCapture(async () => {
+        const pending = pendingDiscovery;
+        if (!pending) {
+          throw new Error("No pending discovery to name");
+        }
+        const result = await journeyOrchestrator.saveNamedDiscovery(
+          pending.mediaUri,
+          label,
+        );
+        setPendingDiscovery(null);
+        return result;
+      }),
+    [pendingDiscovery, runCapture],
   );
+
+  const clearPendingDiscovery = useCallback(() => {
+    setPendingDiscovery(null);
+  }, []);
 
   const captureVideo = useCallback(
     (uri: string) => runCapture(() => journeyOrchestrator.captureVideo(uri)),
@@ -156,9 +198,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       journey,
       isProcessing,
       lastCapture,
+      pendingDiscovery,
       library: libraryService,
       refresh,
-      capturePhoto,
+      beginPhotoDiscovery,
+      confirmNamedDiscovery,
+      clearPendingDiscovery,
       captureVideo,
       captureVoice,
       celebrateMemory,
@@ -173,8 +218,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       journey,
       isProcessing,
       lastCapture,
+      pendingDiscovery,
       refresh,
-      capturePhoto,
+      beginPhotoDiscovery,
+      confirmNamedDiscovery,
+      clearPendingDiscovery,
       captureVideo,
       captureVoice,
       celebrateMemory,
