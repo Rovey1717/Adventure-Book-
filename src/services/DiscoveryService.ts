@@ -1,32 +1,38 @@
 import type { DiscoveryRepository } from "@/data/discovery/DiscoveryRepository";
 import {
+  objectNameForMedia,
   recognizeObjectFromPhoto,
-  titleForMediaType,
 } from "@/domain/discovery/recognition";
 import type {
   Discovery,
-  DiscoveryLocation,
-  LibraryCard,
+  DiscoveryMediaType,
+  GeoLocation,
 } from "@/domain/discovery/types";
 
-export type LocationProvider = () => Promise<DiscoveryLocation>;
+export type LocationProvider = () => Promise<{
+  location: GeoLocation;
+  locationLabel: string | null;
+}>;
 
-async function defaultLocationProvider(): Promise<DiscoveryLocation> {
+async function defaultLocationProvider() {
   try {
     const Location = await import("expo-location");
     const permission = await Location.requestForegroundPermissionsAsync();
     if (!permission.granted) {
-      return null;
+      return { location: null, locationLabel: null };
     }
     const position = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
     });
     return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
+      location: {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      },
+      locationLabel: "Nearby",
     };
   } catch {
-    return null;
+    return { location: null, locationLabel: null };
   }
 }
 
@@ -36,71 +42,40 @@ export class DiscoveryService {
     private readonly getLocation: LocationProvider = defaultLocationProvider,
   ) {}
 
-  listDiscoveries() {
+  list() {
     return this.repository.getAll();
   }
 
-  getDiscovery(id: string) {
+  getById(id: string) {
     return this.repository.getById(id);
   }
 
-  getLibraryCards() {
-    return this.repository.getLibraryCards();
-  }
-
-  async capturePhoto(photoUri: string): Promise<Discovery> {
-    const [title, location] = await Promise.all([
-      recognizeObjectFromPhoto(photoUri),
+  async capturePhoto(mediaUri: string): Promise<Discovery> {
+    const [objectName, place] = await Promise.all([
+      recognizeObjectFromPhoto(mediaUri),
       this.getLocation(),
     ]);
 
     return this.repository.create({
-      title,
+      objectName,
       mediaType: "photo",
-      photo: photoUri,
-      location,
-      status: "ReadyToCelebrate",
+      mediaUri,
+      location: place.location,
+      locationLabel: place.locationLabel,
     });
   }
 
-  async captureVideo(videoUri: string): Promise<Discovery> {
-    const location = await this.getLocation();
+  async captureMedia(
+    mediaType: Exclude<DiscoveryMediaType, "photo">,
+    mediaUri: string,
+  ): Promise<Discovery> {
+    const place = await this.getLocation();
     return this.repository.create({
-      title: titleForMediaType("video"),
-      mediaType: "video",
-      video: videoUri,
-      location,
-      status: "ReadyToCelebrate",
+      objectName: objectNameForMedia(mediaType),
+      mediaType,
+      mediaUri,
+      location: place.location,
+      locationLabel: place.locationLabel,
     });
-  }
-
-  async captureVoiceMemo(voiceUri: string): Promise<Discovery> {
-    const location = await this.getLocation();
-    return this.repository.create({
-      title: titleForMediaType("voice"),
-      mediaType: "voice",
-      voiceMemo: voiceUri,
-      location,
-      status: "ReadyToCelebrate",
-    });
-  }
-
-  async chooseFromLibrary(card: LibraryCard): Promise<Discovery> {
-    const location = await this.getLocation();
-    return this.repository.create({
-      title: card.title,
-      mediaType: "library",
-      photo: `library://${card.id}`,
-      location,
-      status: "ReadyToCelebrate",
-    });
-  }
-
-  async markCelebrated(id: string): Promise<Discovery> {
-    return this.repository.update(id, { status: "Celebrated" });
-  }
-
-  async markFavorite(id: string): Promise<Discovery> {
-    return this.repository.update(id, { status: "Favorite" });
   }
 }

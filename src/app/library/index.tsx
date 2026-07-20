@@ -1,0 +1,175 @@
+import { useMemo, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, fonts, space } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
+import type { LibraryCategoryId } from "@/domain/library/types";
+
+/**
+ * Encyclopedia Library — permanent learning content.
+ * Never stores personal discovery photos.
+ */
+export default function LibraryEncyclopediaScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { library } = useApp();
+  const categories = library.getCategories();
+  const [activeCategory, setActiveCategory] = useState<LibraryCategoryId | "all">(
+    "all",
+  );
+
+  const entries = useMemo(
+    () =>
+      activeCategory === "all"
+        ? library.getEntries()
+        : library.getEntries(activeCategory),
+    [activeCategory, library],
+  );
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
+      <Pressable onPress={() => router.back()} style={styles.backWrap}>
+        <Text style={styles.back}>Back</Text>
+      </Pressable>
+      <Text style={styles.heading}>Library</Text>
+      <Text style={styles.subheading}>
+        An encyclopedia for lifelong learning — not your photo album.
+      </Text>
+
+      <FlatList
+        horizontal
+        data={[{ id: "all", title: "All" } as const, ...categories]}
+        keyExtractor={(item) => item.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chips}
+        renderItem={({ item }) => {
+          const active = item.id === activeCategory;
+          return (
+            <Pressable
+              onPress={() =>
+                setActiveCategory(item.id as LibraryCategoryId | "all")
+              }
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {item.title}
+              </Text>
+            </Pressable>
+          );
+        }}
+      />
+
+      <FlatList
+        data={entries}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardMeta}>{item.pronunciation}</Text>
+            <Text style={styles.cardFact}>{item.facts[0]}</Text>
+            <Text style={styles.assets}>
+              {[
+                item.hasVideo ? "Video" : null,
+                item.hasSound ? "Sounds" : null,
+                item.hasQuiz ? "Quiz" : null,
+                "Facts",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Text>
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingHorizontal: space.screen,
+  },
+  backWrap: {
+    marginBottom: 8,
+  },
+  back: {
+    fontFamily: fonts.bodyBold,
+    color: colors.moss,
+  },
+  heading: {
+    fontFamily: fonts.display,
+    fontSize: 32,
+    color: colors.ink,
+  },
+  subheading: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.inkMuted,
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  chips: {
+    gap: 8,
+    paddingBottom: 14,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: colors.mossSoft,
+  },
+  chipActive: {
+    backgroundColor: colors.moss,
+  },
+  chipText: {
+    fontFamily: fonts.bodySemi,
+    color: colors.mossDeep,
+  },
+  chipTextActive: {
+    color: colors.surfaceRaised,
+  },
+  list: {
+    gap: 12,
+    paddingBottom: 40,
+  },
+  card: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.stroke,
+    gap: 4,
+  },
+  cardTitle: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 20,
+    color: colors.ink,
+  },
+  cardMeta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.inkSoft,
+  },
+  cardFact: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.inkMuted,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  assets: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    color: colors.moss,
+    marginTop: 8,
+  },
+});

@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   CameraView,
   useCameraPermissions,
@@ -24,27 +18,17 @@ import { useIsFocused, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CaptureModeBar } from "@/components/discover/CaptureModeBar";
 import type { CaptureMode } from "@/components/discover/captureModes";
-import { DiscoveryConfirmationSheet } from "@/components/discover/DiscoveryConfirmationSheet";
 import { ProcessingOverlay } from "@/components/discover/ProcessingOverlay";
 import { ShutterButton } from "@/components/discover/ShutterButton";
 import { colors, fonts } from "@/constants/theme";
-import { useDiscovery } from "@/context/DiscoveryContext";
+import { useApp } from "@/context/AppContext";
 
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isFocused = useIsFocused();
   const cameraRef = useRef<CameraView>(null);
-
-  const {
-    pendingDiscovery,
-    isProcessing,
-    capturePhoto,
-    captureVideo,
-    captureVoiceMemo,
-    dismissConfirmation,
-    celebrateDiscovery,
-  } = useDiscovery();
+  const { isProcessing, capturePhoto, captureVideo, captureVoice } = useApp();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facing, setFacing] = useState<CameraType>("back");
@@ -86,30 +70,26 @@ export default function DiscoverScreen() {
     requestMicPermission,
   ]);
 
-  const handleCelebrate = useCallback(async () => {
-    if (!pendingDiscovery) return;
-    const id = pendingDiscovery.id;
-    await celebrateDiscovery(id);
-    router.push(`/celebrate/${id}`);
-  }, [celebrateDiscovery, pendingDiscovery, router]);
+  const goCelebrate = useCallback(
+    (memoryId: string) => {
+      router.push(`/celebrate/${memoryId}`);
+    },
+    [router],
+  );
 
   const takePhoto = useCallback(async () => {
     const ready = await ensurePermissions();
     if (!ready) return;
 
-    if (Platform.OS === "web" || !cameraRef.current) {
-      await capturePhoto(`mock-photo://${Date.now()}`);
-      return;
-    }
+    const uri =
+      Platform.OS === "web" || !cameraRef.current
+        ? `mock-photo://${Date.now()}`
+        : (await cameraRef.current.takePictureAsync({ quality: 0.85 }))?.uri;
 
-    const photo = await cameraRef.current.takePictureAsync({
-      quality: 0.85,
-      skipProcessing: false,
-    });
-    if (photo?.uri) {
-      await capturePhoto(photo.uri);
-    }
-  }, [capturePhoto, ensurePermissions]);
+    if (!uri) return;
+    const result = await capturePhoto(uri);
+    goCelebrate(result.memory.id);
+  }, [capturePhoto, ensurePermissions, goCelebrate]);
 
   const toggleVideo = useCallback(async () => {
     const ready = await ensurePermissions();
@@ -121,7 +101,8 @@ export default function DiscoverScreen() {
     }
 
     if (Platform.OS === "web" || !cameraRef.current) {
-      await captureVideo(`mock-video://${Date.now()}`);
+      const result = await captureVideo(`mock-video://${Date.now()}`);
+      goCelebrate(result.memory.id);
       return;
     }
 
@@ -129,12 +110,13 @@ export default function DiscoverScreen() {
     try {
       const video = await cameraRef.current.recordAsync({ maxDuration: 30 });
       if (video?.uri) {
-        await captureVideo(video.uri);
+        const result = await captureVideo(video.uri);
+        goCelebrate(result.memory.id);
       }
     } finally {
       setIsRecordingVideo(false);
     }
-  }, [captureVideo, ensurePermissions, isRecordingVideo]);
+  }, [captureVideo, ensurePermissions, goCelebrate, isRecordingVideo]);
 
   const toggleVoice = useCallback(async () => {
     const ready = await ensurePermissions();
@@ -142,12 +124,9 @@ export default function DiscoverScreen() {
 
     if (isRecordingVoice) {
       await audioRecorder.stop();
-      const uri = audioRecorder.uri;
-      if (uri) {
-        await captureVoiceMemo(uri);
-      } else {
-        await captureVoiceMemo(`mock-voice://${Date.now()}`);
-      }
+      const uri = audioRecorder.uri ?? `mock-voice://${Date.now()}`;
+      const result = await captureVoice(uri);
+      goCelebrate(result.memory.id);
       return;
     }
 
@@ -155,18 +134,14 @@ export default function DiscoverScreen() {
     audioRecorder.record();
   }, [
     audioRecorder,
-    captureVoiceMemo,
+    captureVoice,
     ensurePermissions,
+    goCelebrate,
     isRecordingVoice,
   ]);
 
   const onShutter = useCallback(async () => {
-    if (isProcessing || pendingDiscovery) return;
-
-    if (mode === "library") {
-      router.push("/choose-discovery");
-      return;
-    }
+    if (isProcessing) return;
     if (mode === "photo") {
       await takePhoto();
       return;
@@ -176,17 +151,7 @@ export default function DiscoverScreen() {
       return;
     }
     await toggleVoice();
-  }, [
-    isProcessing,
-    mode,
-    pendingDiscovery,
-    router,
-    takePhoto,
-    toggleVideo,
-    toggleVoice,
-  ]);
-
-  const showCamera = isFocused && cameraPermission?.granted && mode !== "library";
+  }, [isProcessing, mode, takePhoto, toggleVideo, toggleVoice]);
 
   if (!cameraPermission) {
     return <View style={styles.root} />;
@@ -209,7 +174,7 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.root}>
-      {showCamera ? (
+      {isFocused ? (
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
@@ -232,9 +197,10 @@ export default function DiscoverScreen() {
         <Text style={styles.brand}>AdventureBook</Text>
         <Text style={styles.modeHint}>
           {mode === "photo" && "Point at something wonderful"}
-          {mode === "video" && (isRecordingVideo ? "Recording…" : "Capture a short moment")}
-          {mode === "voice" && (isRecordingVoice ? "Listening…" : "Tell the story out loud")}
-          {mode === "library" && "Pick a saved discovery"}
+          {mode === "video" &&
+            (isRecordingVideo ? "Recording…" : "Capture a short moment")}
+          {mode === "voice" &&
+            (isRecordingVoice ? "Listening…" : "Tell the story out loud")}
         </Text>
       </View>
 
@@ -250,7 +216,9 @@ export default function DiscoverScreen() {
 
         <View style={styles.shutterRow}>
           <Pressable
-            onPress={() => setFacing((current) => (current === "back" ? "front" : "back"))}
+            onPress={() =>
+              setFacing((current) => (current === "back" ? "front" : "back"))
+            }
             style={styles.sideButton}
             accessibilityLabel="Flip camera"
           >
@@ -273,16 +241,10 @@ export default function DiscoverScreen() {
       <ProcessingOverlay
         visible={isProcessing}
         message={
-          mode === "photo" ? "Recognizing your discovery…" : "Saving your discovery…"
+          mode === "photo"
+            ? "Recognizing your discovery…"
+            : "Saving your discovery…"
         }
-      />
-
-      <DiscoveryConfirmationSheet
-        discovery={pendingDiscovery}
-        onCelebrate={() => {
-          void handleCelebrate();
-        }}
-        onKeepExploring={dismissConfirmation}
       />
     </View>
   );

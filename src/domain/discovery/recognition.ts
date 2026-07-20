@@ -1,3 +1,5 @@
+import { delay } from "@/domain/shared/ids";
+
 const RECOGNIZED_OBJECTS = [
   "Dog",
   "Cat",
@@ -10,17 +12,14 @@ const RECOGNIZED_OBJECTS = [
   "Banana",
   "Train",
   "Ocean",
+  "Turtle",
 ] as const;
 
 export type RecognizedObject = (typeof RECOGNIZED_OBJECTS)[number];
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Mocked on-device vision.
- * Swappable later for a real recognition model / API.
+ * Replace with a real model/API without changing DiscoveryService callers.
  */
 export async function recognizeObjectFromPhoto(
   _photoUri: string,
@@ -30,13 +29,8 @@ export async function recognizeObjectFromPhoto(
   return RECOGNIZED_OBJECTS[index];
 }
 
-export function titleForMediaType(
-  mediaType: "video" | "voice",
-): string {
-  if (mediaType === "video") {
-    return "Video Memory";
-  }
-  return "Voice Story";
+export function objectNameForMedia(mediaType: "video" | "voice"): string {
+  return mediaType === "video" ? "Video Memory" : "Voice Story";
 }
 
 export { RECOGNIZED_OBJECTS };

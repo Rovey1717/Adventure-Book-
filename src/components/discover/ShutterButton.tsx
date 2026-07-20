@@ -28,17 +28,11 @@ export function ShutterButton({ mode, isRecording, disabled, onPress }: Props) {
           ? "Stop recording"
           : mode === "photo"
             ? "Take photo"
-            : mode === "library"
-              ? "Open library"
-              : "Start recording"
+            : "Start recording"
       }
     >
       <View
-        style={[
-          styles.inner,
-          recording && styles.innerRecording,
-          mode === "library" && styles.innerLibrary,
-        ]}
+        style={[styles.inner, recording && styles.innerRecording]}
       />
     </Pressable>
   );
@@ -73,8 +67,5 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 8,
     backgroundColor: "#FF3B30",
-  },
-  innerLibrary: {
-    backgroundColor: colors.orange,
   },
 });

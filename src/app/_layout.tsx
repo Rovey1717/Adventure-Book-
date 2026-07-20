@@ -7,7 +7,7 @@ import { Nunito_700Bold } from "@expo-google-fonts/nunito/700Bold";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { DiscoveryProvider } from "@/context/DiscoveryContext";
+import { AppProvider } from "@/context/AppContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <DiscoveryProvider>
+    <AppProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
@@ -46,16 +46,25 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="choose-discovery"
+          name="memory/[id]"
           options={{
-            presentation: "formSheet",
             headerShown: false,
-            sheetAllowedDetents: [0.7, 1],
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 28,
+          }}
+        />
+        <Stack.Screen
+          name="adventure/[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="library/index"
+          options={{
+            presentation: "modal",
+            headerShown: false,
           }}
         />
       </Stack>
-    </DiscoveryProvider>
+    </AppProvider>
   );
 }

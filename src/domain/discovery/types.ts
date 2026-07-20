@@ -1,43 +1,25 @@
-export type DiscoveryMediaType = "photo" | "video" | "voice" | "library";
+export type DiscoveryMediaType = "photo" | "video" | "voice";
 
-export type DiscoveryStatus =
-  | "Captured"
-  | "ReadyToCelebrate"
-  | "Celebrated"
-  | "AdventureStarted"
-  | "AdventureCompleted"
-  | "Favorite";
-
-export type DiscoveryLocation = {
+export type GeoLocation = {
   latitude: number;
   longitude: number;
 } | null;
 
+/** A single real-world capture event. */
 export type Discovery = {
   id: string;
-  title: string;
+  objectName: string;
   mediaType: DiscoveryMediaType;
-  photo: string | null;
-  video: string | null;
-  voiceMemo: string | null;
+  mediaUri: string;
   createdAt: string;
-  location: DiscoveryLocation;
-  status: DiscoveryStatus;
-};
-
-export type LibraryCard = {
-  id: string;
-  title: string;
-  photoColor: string;
-  subtitle: string;
+  location: GeoLocation;
+  locationLabel: string | null;
 };
 
 export type CreateDiscoveryInput = {
-  title: string;
+  objectName: string;
   mediaType: DiscoveryMediaType;
-  photo?: string | null;
-  video?: string | null;
-  voiceMemo?: string | null;
-  location?: DiscoveryLocation;
-  status?: DiscoveryStatus;
+  mediaUri: string;
+  location?: GeoLocation;
+  locationLabel?: string | null;
 };

@@ -1,4 +1,4 @@
-export type CaptureMode = "photo" | "video" | "voice" | "library";
+export type CaptureMode = "photo" | "video" | "voice";
 
 export const CAPTURE_MODES: {
   id: CaptureMode;
@@ -7,5 +7,4 @@ export const CAPTURE_MODES: {
   { id: "photo", label: "Photo" },
   { id: "video", label: "Video" },
   { id: "voice", label: "Voice Memo" },
-  { id: "library", label: "Choose Discovery" },
 ];
