@@ -17,7 +17,7 @@ export class LibraryService {
     return this.repository.getEntryById(id);
   }
 
-  /** Case-insensitive title search for recognition manual lookup. */
+  /** Case-insensitive Library search for intentional learning (no memories). */
   search(query: string): LibraryEntry[] {
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) return this.repository.getEntries();

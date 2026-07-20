@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import {
   CameraView,
   useCameraPermissions,
@@ -18,28 +25,51 @@ import { useIsFocused, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CaptureModeBar } from "@/components/discover/CaptureModeBar";
 import type { CaptureMode } from "@/components/discover/captureModes";
+import { DiscoverSearchBar } from "@/components/discover/DiscoverSearchBar";
+import { DiscoverSearchResults } from "@/components/discover/DiscoverSearchResults";
 import { ProcessingOverlay } from "@/components/discover/ProcessingOverlay";
 import { ShutterButton } from "@/components/discover/ShutterButton";
 import { colors, fonts } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import type { LibraryEntry } from "@/domain/library/types";
 
+/**
+ * Discover hosts two journeys:
+ * A) Camera capture → Memory → Adventure Book
+ * B) Library search → Discovery card → Learning (no memory)
+ */
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isFocused = useIsFocused();
   const cameraRef = useRef<CameraView>(null);
-  const { isProcessing, beginPhotoDiscovery, captureVideo, captureVoice } =
-    useApp();
+  const {
+    isProcessing,
+    beginPhotoDiscovery,
+    captureVideo,
+    captureVoice,
+    library,
+  } = useApp();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facing, setFacing] = useState<CameraType>("back");
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const isRecordingVoice = recorderState.isRecording;
+
+  const searchActive = searchFocused || searchQuery.trim().length > 0;
+
+  const searchResults = useMemo(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return [] as LibraryEntry[];
+    return library.search(trimmed).slice(0, 8);
+  }, [library, searchQuery]);
 
   useEffect(() => {
     void (async () => {
@@ -70,6 +100,23 @@ export default function DiscoverScreen() {
     requestCameraPermission,
     requestMicPermission,
   ]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchFocused(false);
+    Keyboard.dismiss();
+  }, []);
+
+  const openLibraryCard = useCallback(
+    (entry: LibraryEntry) => {
+      // Journey B — learning only; never creates a Memory.
+      Keyboard.dismiss();
+      setSearchFocused(false);
+      setSearchQuery("");
+      router.push(`/library/${entry.id}`);
+    },
+    [router],
+  );
 
   const goNameDiscovery = useCallback(() => {
     router.push("/name-discovery");
@@ -147,6 +194,7 @@ export default function DiscoverScreen() {
 
   const onShutter = useCallback(async () => {
     if (isProcessing) return;
+    if (searchActive) clearSearch();
     if (mode === "photo") {
       await takePhoto();
       return;
@@ -156,7 +204,15 @@ export default function DiscoverScreen() {
       return;
     }
     await toggleVoice();
-  }, [isProcessing, mode, takePhoto, toggleVideo, toggleVoice]);
+  }, [
+    clearSearch,
+    isProcessing,
+    mode,
+    searchActive,
+    takePhoto,
+    toggleVideo,
+    toggleVoice,
+  ]);
 
   if (!cameraPermission) {
     return <View style={styles.root} />;
@@ -168,10 +224,19 @@ export default function DiscoverScreen() {
         <Text style={styles.permissionTitle}>Camera unlocks Discover</Text>
         <Text style={styles.permissionBody}>
           AdventureBook needs the camera so families can capture the real world
-          together.
+          together. You can still search the Library to learn anytime.
         </Text>
-        <Pressable style={styles.permissionButton} onPress={requestCameraPermission}>
+        <Pressable
+          style={styles.permissionButton}
+          onPress={requestCameraPermission}
+        >
           <Text style={styles.permissionButtonText}>Enable Camera</Text>
+        </Pressable>
+        <Pressable
+          style={styles.permissionSecondary}
+          onPress={() => router.push("/library")}
+        >
+          <Text style={styles.permissionSecondaryText}>Browse Library</Text>
         </Pressable>
       </View>
     );
@@ -192,24 +257,52 @@ export default function DiscoverScreen() {
       )}
 
       <LinearGradient
-        colors={["rgba(8,20,16,0.55)", "transparent", "rgba(8,20,16,0.72)"]}
-        locations={[0, 0.35, 1]}
+        colors={["rgba(8,20,16,0.62)", "transparent", "rgba(8,20,16,0.72)"]}
+        locations={[0, 0.38, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.brand}>AdventureBook</Text>
-        <Text style={styles.modeHint}>
-          {mode === "photo" && "Point at something wonderful"}
-          {mode === "video" &&
-            (isRecordingVideo ? "Recording…" : "Capture a short moment")}
-          {mode === "voice" &&
-            (isRecordingVoice ? "Listening…" : "Tell the story out loud")}
-        </Text>
+        <DiscoverSearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onClear={clearSearch}
+          onFocus={() => setSearchFocused(true)}
+        />
+        <DiscoverSearchResults
+          query={searchQuery}
+          results={searchResults}
+          onSelect={openLibraryCard}
+        />
+        {!searchActive ? (
+          <Text style={styles.modeHint}>
+            {mode === "photo" && "Point at something wonderful"}
+            {mode === "video" &&
+              (isRecordingVideo ? "Recording…" : "Capture a short moment")}
+            {mode === "voice" &&
+              (isRecordingVoice ? "Listening…" : "Tell the story out loud")}
+          </Text>
+        ) : (
+          <Text style={styles.modeHint}>
+            Search to learn · Camera saves memories
+          </Text>
+        )}
       </View>
 
-      <View style={[styles.controls, { paddingBottom: insets.bottom + 18 }]}>
+      {searchActive ? (
+        <Pressable
+          style={styles.dismissScrim}
+          onPress={clearSearch}
+          accessibilityLabel="Dismiss search"
+        />
+      ) : null}
+
+      <View
+        style={[styles.controls, { paddingBottom: insets.bottom + 18 }]}
+        pointerEvents={searchActive ? "box-none" : "auto"}
+      >
         <CaptureModeBar
           mode={mode}
           onChange={(next) => {
@@ -260,8 +353,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#143028",
   },
   topBar: {
-    paddingHorizontal: 20,
-    gap: 6,
+    paddingHorizontal: 18,
+    gap: 10,
+    zIndex: 5,
   },
   brand: {
     fontFamily: fonts.display,
@@ -272,6 +366,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemi,
     fontSize: 14,
     color: "rgba(247,255,248,0.78)",
+    marginTop: 2,
+  },
+  dismissScrim: {
+    ...StyleSheet.absoluteFill,
+    top: 220,
+    zIndex: 2,
   },
   controls: {
     position: "absolute",
@@ -279,6 +379,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     gap: 18,
+    zIndex: 4,
   },
   shutterRow: {
     flexDirection: "row",
@@ -328,5 +429,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.displaySemi,
     fontSize: 16,
     color: colors.surfaceRaised,
+  },
+  permissionSecondary: {
+    paddingVertical: 10,
+  },
+  permissionSecondaryText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.moss,
   },
 });

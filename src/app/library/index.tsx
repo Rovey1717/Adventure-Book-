@@ -10,11 +10,12 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import type { LibraryCategoryId } from "@/domain/library/types";
 
 /**
  * Encyclopedia Library — permanent learning content.
- * Never stores personal discovery photos.
+ * Never stores personal discovery photos or creates memories.
  */
 export default function LibraryEncyclopediaScreen() {
   const insets = useSafeAreaInsets();
@@ -71,9 +72,21 @@ export default function LibraryEncyclopediaScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardMeta}>{item.pronunciation}</Text>
+          <Pressable
+            style={styles.card}
+            onPress={() => router.push(`/library/${item.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.title} discovery card`}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardEmoji}>
+                {emojiForLibraryEntry(item.title, item.categoryId)}
+              </Text>
+              <View style={styles.cardTitles}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardMeta}>{item.pronunciation}</Text>
+              </View>
+            </View>
             <Text style={styles.cardFact}>{item.facts[0]}</Text>
             <Text style={styles.assets}>
               {[
@@ -85,7 +98,7 @@ export default function LibraryEncyclopediaScreen() {
                 .filter(Boolean)
                 .join(" · ")}
             </Text>
-          </View>
+          </Pressable>
         )}
       />
     </View>
@@ -148,6 +161,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.stroke,
     gap: 4,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  cardEmoji: {
+    fontSize: 28,
+  },
+  cardTitles: {
+    flex: 1,
+    gap: 2,
   },
   cardTitle: {
     fontFamily: fonts.displaySemi,
