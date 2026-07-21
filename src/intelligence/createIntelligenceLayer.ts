@@ -72,6 +72,7 @@ export async function createIntelligenceLayer(
         currentAge: 9,
         languages: ["en"],
         favoriteCategories: ["Vehicles", "Animals"],
+        coExplorers: ["mom", "dad"],
         completedNodeIds: [
           asWorldNodeId("world_fire_truck"),
           asWorldNodeId("world_ambulance"),

@@ -1,8 +1,26 @@
 import type { AdventureRepository } from "@/data/adventure/AdventureRepository";
 import { selectBlueprintsForChild } from "@/domain/adventure/blueprints";
-import type { Adventure } from "@/domain/adventure/types";
+import type { Adventure, AdventureKind } from "@/domain/adventure/types";
 import type { Memory } from "@/domain/memory/types";
 import { getDemoLearningProfile } from "@/domain/parent/profile";
+
+function parentCoachAdventureTitle(
+  kind: AdventureKind,
+  objectName: string,
+): string {
+  switch (kind) {
+    case "sound":
+      return `Listen for ${objectName} sounds together`;
+    case "count":
+      return `Count ${objectName} features with your child`;
+    case "seek":
+      return `Help them find another ${objectName}`;
+    case "language":
+      return `Say ${objectName} together in Spanish`;
+    default:
+      return `Explore the ${objectName} together`;
+  }
+}
 
 export type AdventureBoard = {
   newAdventures: Adventure[];
@@ -61,8 +79,14 @@ export class AdventureService {
     const blueprints = selectBlueprintsForChild({
       age,
       spanishEnabled,
+      learningMode: profile.learningMode,
       limit: 4,
     });
+
+    const parentCoach =
+      profile.learningModeOverride
+        ? profile.learningMode === "parent_guided"
+        : profile.age <= 4;
 
     const toCreate = blueprints
       .filter((blueprint) => !existingKinds.has(blueprint.kind))
@@ -71,7 +95,9 @@ export class AdventureService {
         discoveryId: memory.discoveryId,
         objectName: memory.objectName,
         kind: blueprint.kind,
-        title: blueprint.titleFor(memory.objectName),
+        title: parentCoach
+          ? parentCoachAdventureTitle(blueprint.kind, memory.objectName)
+          : blueprint.titleFor(memory.objectName),
         status: "unlocked" as const,
         unlockedAt: now,
         completedAt: null,

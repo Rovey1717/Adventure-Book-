@@ -7,6 +7,7 @@ import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import type { LibraryCategoryId } from "@/domain/library/types";
+import { useLearningMode } from "@/hooks/useLearningMode";
 
 const CATEGORY_EMOJI: Record<LibraryCategoryId | "all", string> = {
   all: "✨",
@@ -24,6 +25,11 @@ const ASSET_META: Record<string, string> = {
   Video: "🎬",
   Sounds: "🔊",
   Quiz: "❓",
+  Talk: "💬",
+  Coach: "💬",
+  Reading: "📖",
+  Projects: "🛠️",
+  Stories: "✨",
   Facts: "📖",
   Pronunciation: "🗣️",
   Vocabulary: "📝",
@@ -39,6 +45,7 @@ export default function LibraryTabScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { library } = useApp();
+  const { definition, features } = useLearningMode();
   const categories = library.getCategories();
   const [activeCategory, setActiveCategory] = useState<
     LibraryCategoryId | "all"
@@ -57,10 +64,8 @@ export default function LibraryTabScreen() {
       <View style={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.header}>
           <Text style={styles.heading}>📚 Library</Text>
-          <Text style={styles.subheading}>
-            Garden Learning Graph — connected knowledge you can explore. Capture
-            in Discover to turn a node into a personal Memory.
-          </Text>
+          <Text style={styles.modePill}>{definition.label}</Text>
+          <Text style={styles.subheading}>{definition.tone.libraryHint}</Text>
         </View>
 
         <FlatList
@@ -107,7 +112,13 @@ export default function LibraryTabScreen() {
             const assets = [
               item.hasVideo ? "Video" : null,
               item.hasSound ? "Sounds" : null,
-              item.hasQuiz ? "Quiz" : null,
+              features.quizzes && item.hasQuiz ? "Quiz" : null,
+              features.conversationPrompts && features.parentPromptCount > 0
+                ? "Coach"
+                : null,
+              features.reading ? "Reading" : null,
+              features.projects ? "Projects" : null,
+              features.storyCreation ? "Stories" : null,
               "Facts",
               "Pronunciation",
               "Vocabulary",
@@ -171,6 +182,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 32,
     color: colors.ink,
+  },
+  modePill: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.skyBlue,
+    backgroundColor: colors.pastelBlue,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    marginTop: 4,
   },
   subheading: {
     fontFamily: fonts.body,

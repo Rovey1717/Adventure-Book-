@@ -153,7 +153,11 @@ export const SEED_LEARNING_NODES: LearningNode[] = [
       },
     ],
     wonderQuestions: ["Why do you think firefighters help people?"],
-    conversationPrompts: ["What sound does a fire truck make?"],
+    conversationPrompts: [
+      "Ask your child if they can find the ladder.",
+      "Can they hear the siren?",
+      "What other red things can you see?",
+    ],
     activities: ["Can you find another community helper today?"],
     stories: [],
     videos: [],
@@ -176,8 +180,14 @@ export const SEED_LEARNING_NODES: LearningNode[] = [
           },
         ],
         wonderQuestions: ["Where does a fire truck sleep?"],
-        conversationPrompts: ["Can you say fire truck?"],
-        activities: ["Point to the ladder on a fire truck picture."],
+        conversationPrompts: [
+          "Ask your child if they can find the ladder.",
+          "Can they hear the siren?",
+          "What other red things can you see?",
+        ],
+        activities: [
+          "Ask your child to point to the ladder on a fire truck picture.",
+        ],
         learningGoals: [
           "recognize fire truck",
           "identify red",
@@ -216,7 +226,11 @@ export const SEED_LEARNING_NODES: LearningNode[] = [
           },
         ],
         wonderQuestions: ["Why does a fire truck carry water?"],
-        conversationPrompts: ["Why do firefighters wear helmets?"],
+        conversationPrompts: [
+          "Ask your child why firefighters wear helmets.",
+          "Can they show you the hose or the ladder?",
+          "What other helpers can you name together?",
+        ],
         activities: ["Draw a fire truck and count the wheels."],
         learningGoals: [
           "understand firefighters help people",

@@ -25,10 +25,16 @@ export * from "@/intelligence/engines/AdventureEngine";
 export * from "@/intelligence/engines/ChildEngine";
 export * from "@/intelligence/engines/MemoryEngine";
 export * from "@/intelligence/engines/RecommendationEngine";
+export * from "@/intelligence/engines/NextMeaningfulExperienceEngine";
 export * from "@/intelligence/engines/LivingDiscoveryCardEngine";
 export * from "@/intelligence/engines/DiscoveryMemoryTimelineEngine";
 export * from "@/intelligence/engines/GraphEngine";
 export * from "@/intelligence/family/FamilyAI";
+export type {
+  NextMeaningfulExperience,
+  ReasonedRecommendation,
+  NextMeaningfulExperienceInput,
+} from "@/domain/family/nextMeaningfulExperience";
 export {
   createIntelligenceLayer,
   getIntelligenceLayer,
@@ -36,3 +42,19 @@ export {
   DEMO_INTELLIGENCE_CHILD_ID,
   type IntelligenceLayer,
 } from "@/intelligence/createIntelligenceLayer";
+
+// Structured Family AI profile (SSOT) — not a chatbot
+export type {
+  FamilyAIProfile,
+  AttentionSpanEstimate,
+  MemoryHistoryEntry,
+  AdventureProgressEntry,
+  CollectionProgressEntry,
+  InterestScore,
+  VocabularyEntry,
+  LearningHistoryEntry,
+  FutureDiscoverySuggestion,
+} from "@/domain/family/FamilyAIProfile";
+export { estimateAttentionSpan, emptyFamilyAIProfile } from "@/domain/family/FamilyAIProfile";
+export { applyDiscoveryToProfile } from "@/domain/family/applyDiscoveryToProfile";
+export { familyAIProfileService } from "@/services/family/FamilyAIProfileService";

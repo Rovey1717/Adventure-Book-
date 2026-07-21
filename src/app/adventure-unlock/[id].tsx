@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NextMeaningfulExperienceCard } from "@/components/family/NextMeaningfulExperienceCard";
 import {
   MagicalBackground,
   PlayfulPressable,
@@ -11,18 +12,17 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { getDemoLearningProfile } from "@/domain/parent/profile";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import {
-  learningLevelForAge,
-  definitionForLevel,
-} from "@/intelligence/types/progression";
+  buildNextMeaningfulExperienceInput,
+  NextMeaningfulExperienceEngine,
+} from "@/intelligence/engines/NextMeaningfulExperienceEngine";
+
+const nextEngine = new NextMeaningfulExperienceEngine();
 
 /**
  * Shown after a Learning Card is completed when an Adventure unlocks.
- *
- * Flow: Celebrate → Adventure Unlock → age-appropriate activity
- * related to that adventure → Adventure Card.
- * Never jumps to unrelated educational content (e.g. random Spanish).
+ * Family AI answers the next meaningful experience with reasons.
  */
 export default function AdventureUnlockScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +30,7 @@ export default function AdventureUnlockScreen() {
   const insets = useSafeAreaInsets();
   const { memories, lastCapture, markUnlockSeen, getAdventuresForMemory } =
     useApp();
+  const { profile } = useFamilyAIProfile();
 
   const memory = useMemo(
     () => memories.find((item) => item.id === id) ?? lastCapture?.memory ?? null,
@@ -37,39 +38,18 @@ export default function AdventureUnlockScreen() {
   );
 
   const unlock = memory?.learningCard?.unlockCandidate;
-  const profile = getDemoLearningProfile();
-  const level = definitionForLevel(learningLevelForAge(profile.age));
   const discoveryName = memory?.objectName ?? "discovery";
 
-  const nextActivity = useMemo(() => {
-    switch (level.level) {
-      case 1:
-        return {
-          title: `Point & name`,
-          prompt: `What color is the ${discoveryName}? Can you point to it?`,
-        };
-      case 2:
-        return {
-          title: `Community helper`,
-          prompt: `Who uses a ${discoveryName}? Match what helpers need.`,
-        };
-      case 3:
-        return {
-          title: `How it works`,
-          prompt: `Why do we need a ${discoveryName}?`,
-        };
-      case 4:
-        return {
-          title: `Investigate`,
-          prompt: `How does a ${discoveryName} work?`,
-        };
-      case 5:
-        return {
-          title: `Community research`,
-          prompt: `How does your local community use a ${discoveryName}?`,
-        };
-    }
-  }, [discoveryName, level.level]);
+  const nextMeaningful = useMemo(
+    () =>
+      nextEngine.recommend(
+        buildNextMeaningfulExperienceInput(profile, {
+          currentDiscovery: discoveryName,
+          currentAdventure: unlock?.title ?? null,
+        }),
+      ),
+    [discoveryName, profile, unlock?.title],
+  );
 
   const goToAdventure = async () => {
     if (memory) await markUnlockSeen(memory.id);
@@ -87,8 +67,8 @@ export default function AdventureUnlockScreen() {
 
   return (
     <MagicalBackground variant="lavender">
-      <View
-        style={[
+      <ScrollView
+        contentContainerStyle={[
           styles.content,
           {
             paddingTop: insets.top + 40,
@@ -108,18 +88,28 @@ export default function AdventureUnlockScreen() {
             "Keep discovering in the real world to grow this adventure."}
         </Text>
 
+        <NextMeaningfulExperienceCard experience={nextMeaningful} />
+
         <SoftCard tint="lavender" float style={styles.nextCard}>
           <View style={styles.nextBox}>
-            <Text style={styles.nextEyebrow}>
-              Next for Level {level.level} · {level.label}
+            <Text style={styles.nextEyebrow}>Start here</Text>
+            <Text style={styles.nextTitle}>
+              {nextMeaningful.recommendedAdventure.title}
             </Text>
-            <Text style={styles.nextTitle}>{nextActivity.title}</Text>
-            <Text style={styles.nextBody}>{nextActivity.prompt}</Text>
+            <Text style={styles.nextBody}>
+              {nextMeaningful.recommendedAdventure.detail}
+            </Text>
+            <Text style={styles.modeHint}>
+              Why: {nextMeaningful.recommendedAdventure.reason}
+            </Text>
           </View>
         </SoftCard>
 
         <PulseGlow color={colors.coral}>
-          <PlayfulPressable style={styles.primary} onPress={() => void goToAdventure()}>
+          <PlayfulPressable
+            style={styles.primary}
+            onPress={() => void goToAdventure()}
+          >
             <Text style={styles.primaryText}>Start this activity →</Text>
           </PlayfulPressable>
         </PulseGlow>
@@ -143,16 +133,14 @@ export default function AdventureUnlockScreen() {
         >
           <Text style={styles.tertiaryText}>Maybe Later</Text>
         </PlayfulPressable>
-      </View>
+      </ScrollView>
     </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
     paddingHorizontal: space.lg,
-    justifyContent: "center",
     alignItems: "center",
     gap: 10,
   },
@@ -216,6 +204,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: colors.inkMuted,
+  },
+  modeHint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.skyBlue,
+    marginTop: 4,
+    fontStyle: "italic",
   },
   primary: {
     alignSelf: "stretch",

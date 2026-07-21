@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NextMeaningfulExperienceCard } from "@/components/family/NextMeaningfulExperienceCard";
 import {
   MagicalBackground,
   PlayfulPressable,
@@ -11,17 +12,26 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
+import { useLearningMode } from "@/hooks/useLearningMode";
+import {
+  buildNextMeaningfulExperienceInput,
+  NextMeaningfulExperienceEngine,
+} from "@/intelligence/engines/NextMeaningfulExperienceEngine";
+
+const nextEngine = new NextMeaningfulExperienceEngine();
 
 /**
  * Decision screen after a discovery is permanently saved.
- * Celebrate Now → short celebration → Learning Card
- * Continue Exploring → back to Discover with a lightweight toast
+ * Shows Family AI's next meaningful experience (never random).
  */
 export default function DiscoverySavedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { memories, lastCapture, continueExploring } = useApp();
+  const { definition } = useLearningMode();
+  const { profile } = useFamilyAIProfile();
 
   const memory = useMemo(
     () => memories.find((item) => item.id === id) ?? lastCapture?.memory ?? null,
@@ -30,10 +40,20 @@ export default function DiscoverySavedScreen() {
 
   const name = memory?.objectName ?? "Discovery";
 
+  const nextMeaningful = useMemo(
+    () =>
+      nextEngine.recommend(
+        buildNextMeaningfulExperienceInput(profile, {
+          currentDiscovery: name,
+        }),
+      ),
+    [name, profile],
+  );
+
   return (
     <MagicalBackground variant="celebration">
-      <View
-        style={[
+      <ScrollView
+        contentContainerStyle={[
           styles.content,
           {
             paddingTop: insets.top + 36,
@@ -47,21 +67,19 @@ export default function DiscoverySavedScreen() {
           <Text style={styles.badgeText}>✓ Saved to Adventure Book</Text>
         </View>
 
-        <Text style={styles.eyebrow}>Amazing Discovery!</Text>
+        <Text style={styles.eyebrow}>{definition.tone.celebrateEyebrow}</Text>
         <Text style={styles.title}>You found a {name}!</Text>
         <Text style={styles.body}>
-          Your discovery has been saved. Would you like to celebrate it now or
-          continue exploring?
+          Your discovery has been saved. Family AI already knows what meaningful
+          thing comes next — never a random topic.
         </Text>
-        <Text style={styles.support}>
-          Real life comes first — you can always open this later in Adventure
-          Book.
-        </Text>
+
+        <NextMeaningfulExperienceCard experience={nextMeaningful} />
 
         <SoftCard tint="yellow" float style={styles.heroCard}>
           <View style={styles.heroInner}>
             <Text style={styles.heroEmoji}>🌟</Text>
-            <Text style={styles.heroLabel}>Ready to celebrate?</Text>
+            <Text style={styles.heroLabel}>{definition.label}</Text>
           </View>
         </SoftCard>
 
@@ -76,7 +94,9 @@ export default function DiscoverySavedScreen() {
               });
             }}
           >
-            <Text style={styles.primaryText}>🎉 Celebrate Now</Text>
+            <Text style={styles.primaryText}>
+              🎉 {definition.tone.celebrateCta}
+            </Text>
           </PlayfulPressable>
         </PulseGlow>
 
@@ -93,16 +113,14 @@ export default function DiscoverySavedScreen() {
         >
           <Text style={styles.secondaryText}>Continue Exploring</Text>
         </PlayfulPressable>
-      </View>
+      </ScrollView>
     </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
     paddingHorizontal: space.lg,
-    justifyContent: "center",
     gap: 12,
   },
   badge: {
@@ -139,13 +157,6 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: colors.inkMuted,
     marginTop: 4,
-  },
-  support: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.inkSoft,
-    marginBottom: 6,
   },
   heroCard: {
     marginVertical: 8,
@@ -188,6 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2.5,
     borderColor: colors.skyBlue,
+    marginBottom: 12,
   },
   secondaryText: {
     fontFamily: fonts.displaySemi,

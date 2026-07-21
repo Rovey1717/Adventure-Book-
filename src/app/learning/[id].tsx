@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { useLearningMode } from "@/hooks/useLearningMode";
 
 /**
  * Learning Card route — works after Celebrate Now and from Adventure Book.
@@ -43,6 +44,8 @@ export default function LearningScreen() {
     markLearningViewed,
     completeLearningCard,
   } = useApp();
+
+  const { definition, features } = useLearningMode();
 
   const memoryId = typeof id === "string" ? id : id?.[0] ?? "";
   const celebrateParam = typeof celebrate === "string" ? celebrate : celebrate?.[0];
@@ -141,7 +144,15 @@ export default function LearningScreen() {
               >
                 <Text style={styles.back}>← Back</Text>
               </PlayfulPressable>
-              <Text style={styles.headerLabel}>Learning Card</Text>
+              <Text style={styles.headerLabel}>
+                {features.conversationPrompts &&
+                features.parentPromptCount > 0 &&
+                !features.quizzes
+                  ? "Parent coaching"
+                  : features.projects || features.storyCreation
+                    ? "Explorer card"
+                    : "Learning Card"}
+              </Text>
               <View style={styles.backSpacer} />
             </View>
           }
@@ -160,7 +171,9 @@ export default function LearningScreen() {
                   })();
                 }}
               >
-                <Text style={styles.doneText}>Finish Learning Card ⭐</Text>
+                <Text style={styles.doneText}>
+                  {definition.tone.learningCta} ⭐
+                </Text>
               </PlayfulPressable>
             </PulseGlow>
           }

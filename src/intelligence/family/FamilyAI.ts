@@ -1,10 +1,17 @@
 import type { GraphEngine } from "@/intelligence/engines/GraphEngine";
 import { DiscoveryMemoryTimelineEngine } from "@/intelligence/engines/DiscoveryMemoryTimelineEngine";
 import { LivingDiscoveryCardEngine } from "@/intelligence/engines/LivingDiscoveryCardEngine";
+import {
+  buildNextMeaningfulExperienceInput,
+  NextMeaningfulExperienceEngine,
+} from "@/intelligence/engines/NextMeaningfulExperienceEngine";
 import type { DiscoveryMemoryTimeline } from "@/intelligence/types/discoveryMemoryTimeline";
 import type { ChildId } from "@/intelligence/types/ids";
 import type { LivingDiscoveryCard } from "@/intelligence/types/livingDiscoveryCard";
 import type { RecommendationBundle } from "@/intelligence/types/recommendations";
+import type { FamilyAIProfile } from "@/domain/family/FamilyAIProfile";
+import type { NextMeaningfulExperience } from "@/domain/family/nextMeaningfulExperience";
+import { familyAIProfileService } from "@/services/family/FamilyAIProfileService";
 
 export type PersonalizedExperience = {
   worldNodeId: string | null;
@@ -14,6 +21,8 @@ export type PersonalizedExperience = {
   wonderQuestion: string | null;
   activity: string | null;
   recommendations: RecommendationBundle;
+  /** Always grounded — never random */
+  nextMeaningful: NextMeaningfulExperience;
   adventureProgress: Array<{
     adventureId: string;
     title: string;
@@ -24,25 +33,46 @@ export type PersonalizedExperience = {
 };
 
 /**
- * Family AI — never reads UI state.
- * Always queries GraphEngine → five graphs → personalized experience.
- *
- * Living Discovery Cards are composed here: Learn (Learning Graph) +
- * My Journey (Memory Graph), never stored on the card itself.
+ * Family AI — structured personalization, never a chatbot.
+ * Always answers: "What is the next meaningful thing for this child to experience?"
  */
 export class FamilyAI {
   private readonly livingCards: LivingDiscoveryCardEngine;
   private readonly memoryTimeline: DiscoveryMemoryTimelineEngine;
+  private readonly nextExperience = new NextMeaningfulExperienceEngine();
 
   constructor(private readonly graph: GraphEngine) {
     this.livingCards = new LivingDiscoveryCardEngine(graph);
     this.memoryTimeline = new DiscoveryMemoryTimelineEngine(graph);
   }
 
+  async profile(childId?: ChildId | string): Promise<FamilyAIProfile> {
+    const id = childId ?? familyAIProfileService.getChildId();
+    const child = await this.graph.child.getById(id);
+    if (child) {
+      familyAIProfileService.syncFromChildNode(child);
+    }
+    return familyAIProfileService.get();
+  }
+
   /**
-   * Compose a Living Discovery Card — childhood timeline for one World Node.
-   * Knowledge (Learn) + personal memories (My Journey).
+   * Core Family AI question — never random content.
+   * Every recommendation includes a reason.
    */
+  async nextMeaningfulExperience(input: {
+    childId?: ChildId | string;
+    currentDiscovery?: string | null;
+    currentAdventure?: string | null;
+  } = {}): Promise<NextMeaningfulExperience> {
+    const profile = await this.profile(input.childId);
+    return this.nextExperience.recommend(
+      buildNextMeaningfulExperienceInput(profile, {
+        currentDiscovery: input.currentDiscovery,
+        currentAdventure: input.currentAdventure,
+      }),
+    );
+  }
+
   livingDiscoveryCard(input: {
     childId: ChildId | string;
     worldNodeId?: string;
@@ -51,10 +81,6 @@ export class FamilyAI {
     return this.livingCards.compose(input);
   }
 
-  /**
-   * Memory Timeline for a Discovery Card — Memory Graph only.
-   * Newest → oldest. Used by the v1 Living Discovery Card UI.
-   */
   discoveryMemoryTimeline(input: {
     childId: ChildId | string;
     discoveryTitle: string;
@@ -63,17 +89,14 @@ export class FamilyAI {
     return this.memoryTimeline.forDiscovery(input);
   }
 
-  /**
-   * Build a personalized experience for a child after (or around) a discovery.
-   */
   async experienceForDiscovery(input: {
     childId: ChildId | string;
     discoveryLabel?: string;
     worldNodeId?: string;
     memoryId?: string;
   }): Promise<PersonalizedExperience> {
-    const child = await this.graph.child.getById(input.childId);
-    const age = child?.currentAge ?? 5;
+    const familyProfile = await this.profile(input.childId);
+    const age = familyProfile.currentAge;
 
     let worldNodeId = input.worldNodeId ?? null;
     let worldName: string | null = null;
@@ -123,6 +146,12 @@ export class FamilyAI {
       });
     }
 
+    const nextMeaningful = await this.nextMeaningfulExperience({
+      childId: input.childId,
+      currentDiscovery: input.discoveryLabel ?? worldName,
+      currentAdventure: adventureProgress.find((item) => item.unlocked)?.title,
+    });
+
     return {
       worldNodeId,
       worldName,
@@ -132,6 +161,7 @@ export class FamilyAI {
         variant?.wonderQuestions[0] ?? node?.wonderQuestions[0] ?? null,
       activity: variant?.activities[0] ?? node?.activities[0] ?? null,
       recommendations,
+      nextMeaningful,
       adventureProgress,
     };
   }

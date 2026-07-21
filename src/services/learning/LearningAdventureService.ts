@@ -6,6 +6,17 @@ import type {
   LearningCardSnapshot,
   LearningModule,
 } from "@/domain/learning/card";
+import {
+  parentCoachStartersFor,
+} from "@/domain/learning/parentCoach";
+import {
+  featuresForChild,
+  type DevelopmentalFeaturePlan,
+} from "@/domain/learning/developmentalFeatures";
+import {
+  learningModeForAge,
+  type LearningModeId,
+} from "@/domain/learning/mode";
 import type { LibraryEntry } from "@/domain/library/types";
 import type { Memory } from "@/domain/memory/types";
 import { getDemoLearningProfile } from "@/domain/parent/profile";
@@ -94,10 +105,11 @@ function quizForDiscovery(
   entry: LibraryEntry | null,
 ): { question: string; choices: string[]; answerIndex: number } {
   const fromLibrary = entry?.quiz[0];
-  // Only use library quiz if it clearly mentions this discovery.
   if (
     fromLibrary &&
-    fromLibrary.question.toLowerCase().includes(name.toLowerCase().split(" ")[0]!)
+    fromLibrary.question
+      .toLowerCase()
+      .includes(name.toLowerCase().split(" ")[0]!)
   ) {
     return fromLibrary;
   }
@@ -178,15 +190,86 @@ function challengeForLevel(name: string, level: LearningLevel): string {
   }
 }
 
+function matchForDiscovery(name: string): LearningModule {
+  return {
+    type: "match",
+    prompt: `Match each idea to the ${name}.`,
+    pairs: [
+      { left: name, right: "What we discovered" },
+      { left: "Helper", right: "Someone who uses it" },
+      { left: "Job", right: "What it helps with" },
+    ],
+  };
+}
+
+function readingForDiscovery(name: string, fact: string): LearningModule {
+  return {
+    type: "reading",
+    title: `Read about ${name}`,
+    text: fact,
+  };
+}
+
+function projectForDiscovery(name: string): LearningModule {
+  return {
+    type: "project",
+    title: `${name} project`,
+    steps: [
+      `Observe one real ${name} (or a photo of one) carefully.`,
+      `Sketch or list three important parts.`,
+      `Explain to someone how those parts help it do its job.`,
+      `Share one question you still want to investigate.`,
+    ],
+  };
+}
+
+function storyForDiscovery(name: string): LearningModule {
+  return {
+    type: "story",
+    title: `Tell a ${name} story`,
+    prompt: `Create a short story that includes a ${name}.`,
+    starters: [
+      `Once upon a time, a ${name} had an important job…`,
+      `Someone needed help — and the ${name} was ready…`,
+      `What happened next? You decide the ending.`,
+    ],
+  };
+}
+
+function researchForDiscovery(name: string): LearningModule {
+  return {
+    type: "research",
+    question: `How does a ${name} help people in your community?`,
+    hints: [
+      "Ask a grown-up who might know.",
+      "Look for a trusted book or local fact.",
+      "Write one sentence with what you learned.",
+    ],
+  };
+}
+
+function aiChatForDiscovery(name: string): LearningModule {
+  return {
+    type: "ai_chat",
+    title: `Talk about ${name}`,
+    starter: `I'm curious about ${name}. What should we explore first?`,
+    followUps: [
+      `What problems does a ${name} solve?`,
+      `What would happen if we didn't have a ${name}?`,
+      `How is a ${name} different from something similar?`,
+    ],
+  };
+}
+
 export type LearningCardOptions = {
   age?: number;
   spanishEnabled?: boolean;
+  learningMode?: LearningModeId;
 };
 
 /**
  * Builds a modular Learning Card from Library + Learning Graph when available.
- * Content is always about THIS discovery and THIS child's learning level.
- * Spanish modules appear only when parent-enabled.
+ * Module set follows the child's learning mode.
  */
 export class LearningAdventureService {
   constructor(
@@ -203,13 +286,24 @@ export class LearningAdventureService {
     const age = options.age ?? profile.age;
     const spanishEnabled =
       options.spanishEnabled ?? profile.spanishEnabled;
+    const mode =
+      options.learningMode ??
+      profile.learningMode ??
+      learningModeForAge(age);
+    const features = featuresForChild({
+      age,
+      mode,
+      modeOverride: profile.learningModeOverride,
+    });
     const level = learningLevelForAge(age);
 
     const entry =
       this.library.search(memory.objectName).find(
         (item) =>
           item.title.toLowerCase() === memory.objectName.toLowerCase(),
-      ) ?? this.library.search(memory.objectName)[0] ?? null;
+      ) ??
+      this.library.search(memory.objectName)[0] ??
+      null;
 
     const graphNode = this.learningGraph.getNodeByName(memory.objectName);
     const related = graphNode
@@ -229,6 +323,8 @@ export class LearningAdventureService {
       progress,
       level,
       spanishEnabled,
+      mode,
+      features,
     });
 
     const unlockCandidate = collection
@@ -260,14 +356,27 @@ export class LearningAdventureService {
     progress: ReturnType<typeof collectionProgress> | null;
     level: LearningLevel;
     spanishEnabled: boolean;
+    mode: LearningModeId;
+    features: DevelopmentalFeaturePlan;
   }): LearningModule[] {
-    const { memory, entry, related, collection, progress, level, spanishEnabled } =
-      input;
+    const {
+      memory,
+      entry,
+      related,
+      collection,
+      progress,
+      level,
+      spanishEnabled,
+      features,
+    } = input;
     const name = memory.objectName;
     const emoji = emojiFor(name, memory.category);
     const fact = entry?.facts[0] ?? fallbackFact(name);
     const pronunciation = entry?.pronunciation ?? name;
-    const quiz = quizForDiscovery(name, level, entry);
+    const parentLed =
+      features.conversationPrompts &&
+      features.parentPromptCount > 0 &&
+      !features.quizzes;
 
     const modules: LearningModule[] = [
       {
@@ -279,7 +388,11 @@ export class LearningAdventureService {
       },
       {
         type: "save_status",
-        message: "Saved forever in Adventure Book",
+        message: parentLed
+          ? "Saved — conversation starters ready for you"
+          : features.projects || features.research
+            ? "Saved — ready for a deeper dive"
+            : "Saved forever in Adventure Book",
       },
       {
         type: "hear_word",
@@ -290,25 +403,70 @@ export class LearningAdventureService {
         type: "fun_fact",
         fact,
       },
-      {
+    ];
+
+    if (features.conversationPrompts && features.parentPromptCount > 0) {
+      const coach = parentCoachStartersFor(name);
+      const prompts = coach.starters.slice(0, features.parentPromptCount);
+      modules.push({
+        type: "conversation_prompts",
+        title: parentLed
+          ? "How to teach this moment"
+          : "A few conversation starters",
+        prompts,
+      });
+    }
+
+    if (features.quizzes) {
+      const quiz = quizForDiscovery(name, level, entry);
+      modules.push({
         type: "quiz",
         question: quiz.question,
         choices: quiz.choices,
         answerIndex: quiz.answerIndex,
-      },
-      {
+      });
+    }
+
+    if (features.matching) {
+      modules.push(matchForDiscovery(name));
+    }
+
+    if (features.reading) {
+      modules.push(readingForDiscovery(name, fact));
+    }
+
+    if (features.criticalThinking || features.quizzes) {
+      modules.push({
         type: "wonder",
         prompt: wonderForLevel(name, level),
-      },
-      {
+      });
+    }
+
+    if (features.challenges) {
+      modules.push({
         type: "challenge",
         text: collection
           ? `Can you find another ${collection.title.toLowerCase()} helper related to ${name}?`
           : challengeForLevel(name, level),
-      },
-    ];
+      });
+    }
 
-    // Spanish integrates into THIS discovery — only when enabled.
+    if (features.projects) {
+      modules.push(projectForDiscovery(name));
+    }
+
+    if (features.storyCreation) {
+      modules.push(storyForDiscovery(name));
+    }
+
+    if (features.research) {
+      modules.push(researchForDiscovery(name));
+    }
+
+    if (features.aiConversations) {
+      modules.push(aiChatForDiscovery(name));
+    }
+
     if (spanishEnabled) {
       const pair = SPANISH[name.toLowerCase()] ?? {
         word: name,
@@ -321,7 +479,7 @@ export class LearningAdventureService {
       });
     }
 
-    if (collection && progress) {
+    if (features.collections && collection && progress) {
       modules.push({
         type: "progress",
         label: collection.title,
@@ -342,12 +500,18 @@ export class LearningAdventureService {
       });
     }
 
-    modules.push({
-      type: "future",
-      id: "stories",
-      title: "Stories & songs",
-      teaser: "Coming soon — more ways to play with this discovery.",
-    });
+    if (!features.storyCreation) {
+      modules.push({
+        type: "future",
+        id: "stories",
+        title: features.aiConversations
+          ? "Deeper AI conversations"
+          : "Stories & songs",
+        teaser: features.aiConversations
+          ? "Coming soon — longer research chats about this discovery."
+          : "Story creation unlocks as your explorer grows.",
+      });
+    }
 
     return modules;
   }

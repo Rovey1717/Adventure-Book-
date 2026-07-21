@@ -12,6 +12,7 @@ import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { accentForCategory } from "@/domain/shared/categories";
 import type { Memory } from "@/domain/memory/types";
+import { useLearningMode } from "@/hooks/useLearningMode";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -21,42 +22,47 @@ function formatDate(iso: string) {
   });
 }
 
-const STATUS_META: Record<
-  Memory["learningViewStatus"],
-  { label: string; emoji: string; bg: string; fg: string }
-> = {
-  completed: {
-    label: "Learning completed",
-    emoji: "🏆",
-    bg: colors.mossSoft,
-    fg: colors.mossDeep,
-  },
-  viewed: {
-    label: "Learning started",
-    emoji: "📖",
-    bg: colors.pastelBlue,
-    fg: colors.skyBlue,
-  },
-  never_viewed: {
-    label: "Saved · ready to celebrate",
+function statusMetaForMode(
+  status: Memory["learningViewStatus"],
+  bookHint: string,
+): { label: string; emoji: string; bg: string; fg: string } {
+  if (status === "completed") {
+    return {
+      label: "Learning completed",
+      emoji: "🏆",
+      bg: colors.mossSoft,
+      fg: colors.mossDeep,
+    };
+  }
+  if (status === "viewed") {
+    return {
+      label: "Learning started",
+      emoji: "📖",
+      bg: colors.pastelBlue,
+      fg: colors.skyBlue,
+    };
+  }
+  return {
+    label: bookHint,
     emoji: "🎉",
     bg: colors.pastelYellow,
     fg: colors.sunshineDeep,
-  },
-};
+  };
+}
 
 function MemoryCard({
   memory,
   onPress,
   index,
+  bookHint,
 }: {
   memory: Memory;
   onPress: () => void;
   index: number;
+  bookHint: string;
 }) {
   const accent = accentForCategory(memory.category);
-  const status =
-    STATUS_META[memory.learningViewStatus] ?? STATUS_META.never_viewed;
+  const status = statusMetaForMode(memory.learningViewStatus, bookHint);
 
   return (
     <PlayfulPressable
@@ -121,6 +127,7 @@ export default function AdventureBookScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { memories, refresh } = useApp();
+  const { definition } = useLearningMode();
 
   useFocusEffect(
     useCallback(() => {
@@ -135,8 +142,9 @@ export default function AdventureBookScreen() {
       <View style={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.header}>
           <Text style={styles.heading}>📖 Adventure Book</Text>
+          <Text style={styles.modePill}>{definition.label}</Text>
           <Text style={styles.subheading}>
-            Every real-world discovery — celebrate now or come back anytime
+            Every real-world discovery — {definition.tone.bookStatusHint.toLowerCase()}
           </Text>
         </View>
 
@@ -164,6 +172,7 @@ export default function AdventureBookScreen() {
               <MemoryCard
                 memory={item}
                 index={index}
+                bookHint={definition.tone.bookStatusHint}
                 onPress={() => router.push(`/memory/${item.id}`)}
               />
             )}
@@ -187,6 +196,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 32,
     color: colors.ink,
+  },
+  modePill: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.sunshineDeep,
+    backgroundColor: colors.pastelYellow,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    marginTop: 4,
   },
   subheading: {
     fontFamily: fonts.body,

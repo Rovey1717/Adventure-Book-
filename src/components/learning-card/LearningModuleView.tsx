@@ -38,6 +38,20 @@ export function LearningModuleView({ module, index = 0 }: Props) {
       return <WonderModule module={module} index={index} />;
     case "challenge":
       return <ChallengeModule module={module} index={index} />;
+    case "conversation_prompts":
+      return <ConversationPromptsModule module={module} index={index} />;
+    case "match":
+      return <MatchModule module={module} index={index} />;
+    case "reading":
+      return <ReadingModule module={module} index={index} />;
+    case "project":
+      return <ProjectModule module={module} index={index} />;
+    case "story":
+      return <StoryModule module={module} index={index} />;
+    case "research":
+      return <ResearchModule module={module} index={index} />;
+    case "ai_chat":
+      return <AiChatModule module={module} index={index} />;
     case "progress":
       return <ProgressModule module={module} index={index} />;
     case "related":
@@ -250,6 +264,145 @@ function ChallengeModule({
   );
 }
 
+function ConversationPromptsModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "conversation_prompts" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="💬 Coach the parent" index={index}>
+      <Text style={styles.question}>{module.title}</Text>
+      <Text style={styles.hint}>
+        Speak these to your child. Family AI coaches you — it never replaces
+        your connection.
+      </Text>
+      {module.prompts.map((prompt) => (
+        <View key={prompt} style={styles.promptRow}>
+          <Text style={styles.promptBullet}>•</Text>
+          <Text style={styles.body}>{prompt}</Text>
+        </View>
+      ))}
+    </CardShell>
+  );
+}
+
+function MatchModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "match" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="🔗 Matching" index={index}>
+      <Text style={styles.question}>{module.prompt}</Text>
+      {module.pairs.map((pair) => (
+        <View key={`${pair.left}-${pair.right}`} style={styles.matchRow}>
+          <Text style={styles.matchLeft}>{pair.left}</Text>
+          <Text style={styles.matchArrow}>→</Text>
+          <Text style={styles.matchRight}>{pair.right}</Text>
+        </View>
+      ))}
+    </CardShell>
+  );
+}
+
+function ReadingModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "reading" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="📖 Reading" index={index}>
+      <Text style={styles.question}>{module.title}</Text>
+      <Text style={styles.body}>{module.text}</Text>
+    </CardShell>
+  );
+}
+
+function ProjectModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "project" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="🛠️ Project" index={index}>
+      <Text style={styles.question}>{module.title}</Text>
+      {module.steps.map((step, stepIndex) => (
+        <Text key={step} style={styles.body}>
+          {stepIndex + 1}. {step}
+        </Text>
+      ))}
+    </CardShell>
+  );
+}
+
+function StoryModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "story" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="📖 Story creation" index={index}>
+      <Text style={styles.question}>{module.title}</Text>
+      <Text style={styles.body}>{module.prompt}</Text>
+      {module.starters.map((line) => (
+        <Text key={line} style={styles.hint}>
+          • {line}
+        </Text>
+      ))}
+    </CardShell>
+  );
+}
+
+function ResearchModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "research" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="🔍 Research" index={index}>
+      <Text style={styles.question}>{module.question}</Text>
+      {module.hints.map((hint) => (
+        <Text key={hint} style={styles.hint}>
+          • {hint}
+        </Text>
+      ))}
+    </CardShell>
+  );
+}
+
+function AiChatModule({
+  module,
+  index,
+}: {
+  module: Extract<LearningModule, { type: "ai_chat" }>;
+  index: number;
+}) {
+  return (
+    <CardShell eyebrow="🤖 AI conversation" index={index}>
+      <Text style={styles.question}>{module.title}</Text>
+      <Text style={styles.body}>{module.starter}</Text>
+      <Text style={styles.hint}>Try asking next:</Text>
+      {module.followUps.map((item) => (
+        <Text key={item} style={styles.hint}>
+          • {item}
+        </Text>
+      ))}
+    </CardShell>
+  );
+}
+
 function ProgressModule({
   module,
   index,
@@ -419,6 +572,40 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     color: colors.inkMuted,
+  },
+  promptRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  promptBullet: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 17,
+    color: colors.skyBlue,
+    lineHeight: 26,
+  },
+  matchRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
+  matchLeft: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.navy,
+  },
+  matchArrow: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.inkSoft,
+  },
+  matchRight: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.inkMuted,
+    flexShrink: 1,
   },
   progressTitle: {
     fontFamily: fonts.displaySemi,

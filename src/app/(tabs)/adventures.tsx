@@ -6,6 +6,7 @@ import { MagicalBackground, PlayfulPressable, SoftCard } from "@/components/ui";
 import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { Adventure, AdventureKind } from "@/domain/adventure/types";
+import { useLearningMode } from "@/hooks/useLearningMode";
 
 const KIND_EMOJI: Record<AdventureKind, string> = {
   language: "🗣️",
@@ -116,6 +117,7 @@ export default function AdventuresScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { adventureBoard, refresh, startAdventure } = useApp();
+  const { definition } = useLearningMode();
 
   useFocusEffect(
     useCallback(() => {
@@ -143,9 +145,9 @@ export default function AdventuresScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.heading}>🗺️ Adventures</Text>
+          <Text style={styles.modePill}>{definition.label}</Text>
           <Text style={styles.subheading}>
-            Personalized learning unlocked after you capture something in the
-            real world. Adventures cannot be created manually.
+            {definition.tone.adventuresSubtitle}
           </Text>
         </View>
 
@@ -197,6 +199,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 32,
     color: colors.ink,
+  },
+  modePill: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.lavenderInk,
+    backgroundColor: colors.pastelPurple,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    marginTop: 4,
   },
   subheading: {
     fontFamily: fonts.body,

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AdventureBanner,
   ContinueExploring,
+  ConversationPromptsSection,
   DiscoveryHero,
   DiscoveryMemoryStatsBar,
   FactSection,
@@ -23,13 +24,15 @@ import {
   RelatedDiscoveries,
   VideoCard,
   WhyThisIsNext,
+  quickActionsForMode,
   type QuickActionId,
 } from "@/components/discovery-card";
 import { MagicalBackground, PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
-import { DEMO_CHILD_NAME } from "@/domain/parent/profile";
+import { getLearningProfile } from "@/domain/parent/profile";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import {
   DEMO_INTELLIGENCE_CHILD_ID,
   getIntelligenceLayer,
@@ -56,6 +59,7 @@ export default function LibraryDiscoveryCardScreen() {
     toggleFavorite,
     startAdventure,
   } = useApp();
+  const { features, definition, profile } = useLearningMode();
   const scrollRef = useRef<ScrollView>(null);
   const sectionY = useRef<Partial<Record<SectionKey, number>>>({});
   const [soundHint, setSoundHint] = useState<string | null>(null);
@@ -303,7 +307,12 @@ export default function LibraryDiscoveryCardScreen() {
         {progress ? (
           <View style={styles.masteryRow}>
             <Text style={styles.masteryText}>
-              Video {progress.watchedVideo ? "✅" : "○"} · Quiz{" "}
+              Video {progress.watchedVideo ? "✅" : "○"} ·{" "}
+              {features.quizzes
+                ? "Quiz"
+                : features.conversationPrompts
+                  ? "Coach"
+                  : "Learn"}{" "}
               {progress.completedQuiz ? "✅" : "○"} · Adventure{" "}
               {progress.completedAdventure ? "✅" : "○"} · Mastery{" "}
               {progress.masteryScore}%
@@ -313,7 +322,10 @@ export default function LibraryDiscoveryCardScreen() {
 
         {soundHint ? <Text style={styles.soundHint}>{soundHint}</Text> : null}
 
-        <QuickActionGrid onPress={onQuickAction} />
+        <QuickActionGrid
+          actions={quickActionsForMode(features)}
+          onPress={onQuickAction}
+        />
 
         <View onLayout={onSectionLayout("adventure")}>
           <AdventureBanner
@@ -338,7 +350,7 @@ export default function LibraryDiscoveryCardScreen() {
         <LearningStages
           objectName={entry.title}
           childName={
-            learningGraph.child.getProfile().name || DEMO_CHILD_NAME
+            learningGraph.child.getProfile().name || getLearningProfile().name
           }
         />
 
@@ -367,7 +379,7 @@ export default function LibraryDiscoveryCardScreen() {
           <FactSection facts={entry.facts} vocabulary={entry.vocabulary} />
         </View>
 
-        {entry.hasQuiz ? (
+        {features.quizzes && entry.hasQuiz ? (
           <View onLayout={onSectionLayout("quiz")}>
             <QuizSection
               objectName={entry.title}
@@ -382,14 +394,27 @@ export default function LibraryDiscoveryCardScreen() {
           </View>
         ) : null}
 
+        {features.conversationPrompts &&
+        features.parentPromptCount > 0 ? (
+          <View onLayout={onSectionLayout("quiz")}>
+            <ConversationPromptsSection
+              objectName={entry.title}
+              childName={profile.name}
+              promptCount={features.parentPromptCount}
+            />
+          </View>
+        ) : null}
+
         <View
           style={styles.activitiesNote}
           onLayout={onSectionLayout("activities")}
         >
-          <Text style={styles.activitiesTitle}>🎯 Activities</Text>
+          <Text style={styles.activitiesTitle}>
+            {features.projects ? "🛠️ Projects" : "🎯 Activities"}
+          </Text>
           <Text style={styles.activitiesBody}>
-            Draw, count, listen, and explore more after you unlock the{" "}
-            {entry.title} Adventure from a real-world discovery.
+            {definition.tone.libraryHint}. Unlock more after a real-world{" "}
+            {entry.title} discovery.
           </Text>
         </View>
 

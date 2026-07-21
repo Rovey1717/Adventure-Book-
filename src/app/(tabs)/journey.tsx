@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NextMeaningfulExperienceCard } from "@/components/family/NextMeaningfulExperienceCard";
 import {
   AnimatedProgressBar,
   MagicalBackground,
@@ -10,6 +11,14 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
+import { useLearningMode } from "@/hooks/useLearningMode";
+import {
+  buildNextMeaningfulExperienceInput,
+  NextMeaningfulExperienceEngine,
+} from "@/intelligence/engines/NextMeaningfulExperienceEngine";
+
+const nextEngine = new NextMeaningfulExperienceEngine();
 
 type Tint = "white" | "blue" | "yellow" | "green" | "coral" | "lavender" | "aqua";
 
@@ -81,6 +90,8 @@ export default function JourneyScreen() {
   const insets = useSafeAreaInsets();
   const { journey, refresh, learningGraph, memories } = useApp();
   const router = useRouter();
+  const { definition } = useLearningMode();
+  const { profile } = useFamilyAIProfile();
 
   useFocusEffect(
     useCallback(() => {
@@ -102,6 +113,16 @@ export default function JourneyScreen() {
       100,
   );
 
+  const nextMeaningful = useMemo(
+    () =>
+      nextEngine.recommend(
+        buildNextMeaningfulExperienceInput(profile, {
+          currentDiscovery: profile.memoryHistory[0]?.objectName ?? null,
+        }),
+      ),
+    [profile],
+  );
+
   return (
     <MagicalBackground variant="garden">
       <ScrollView
@@ -115,10 +136,13 @@ export default function JourneyScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.heading}>🌻 Journey</Text>
+          <Text style={styles.modePill}>{definition.label}</Text>
           <Text style={styles.subheading}>
-            Progress that grows with every real-world discovery.
+            {definition.tone.journeySubtitle}
           </Text>
         </View>
+
+        <NextMeaningfulExperienceCard experience={nextMeaningful} />
 
         <View style={styles.grid}>
           <StatCard
@@ -277,6 +301,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 32,
     color: colors.ink,
+  },
+  modePill: {
+    alignSelf: "flex-start",
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.grassDeep,
+    backgroundColor: colors.pastelGreen,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    marginTop: 4,
   },
   subheading: {
     fontFamily: fonts.body,

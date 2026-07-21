@@ -16,6 +16,14 @@ export type LearningPreference = {
   strength: number;
 };
 
+/** Who usually explores with the child — from Family AI onboarding. */
+export type CoExplorerRole =
+  | "mom"
+  | "dad"
+  | "grandparent"
+  | "sibling"
+  | "other";
+
 export type ChildStreaks = {
   discoveryDays: number;
   lastDiscoveryDate: string | null;
@@ -65,7 +73,10 @@ export type ChildNode = {
   learningLanguages: string[];
   /** Explicit Spanish toggle from parent settings. */
   spanishEnabled: boolean;
+  /** Interests from onboarding — feeds recommendations. */
   favoriteCategories: string[];
+  /** Family members who usually explore together. */
+  coExplorers: CoExplorerRole[];
   completedNodeIds: WorldNodeId[];
   completedAdventureIds: AdventureNodeId[];
   masteredLearningObjectives: LearningObjectiveId[];

@@ -10,6 +10,13 @@ export type LearningModuleType =
   | "quiz"
   | "wonder"
   | "challenge"
+  | "conversation_prompts"
+  | "match"
+  | "reading"
+  | "project"
+  | "story"
+  | "research"
+  | "ai_chat"
   | "progress"
   | "related"
   | "save_status"
@@ -51,6 +58,52 @@ export type LearningChallengeModule = {
   text: string;
 };
 
+/** Parent Guided — talk prompts instead of quizzes. */
+export type LearningConversationPromptsModule = {
+  type: "conversation_prompts";
+  title: string;
+  prompts: string[];
+};
+
+export type LearningMatchModule = {
+  type: "match";
+  prompt: string;
+  pairs: Array<{ left: string; right: string }>;
+};
+
+export type LearningReadingModule = {
+  type: "reading";
+  title: string;
+  text: string;
+};
+
+export type LearningProjectModule = {
+  type: "project";
+  title: string;
+  steps: string[];
+};
+
+/** Independent story creation — child authors a short tale about the discovery. */
+export type LearningStoryModule = {
+  type: "story";
+  title: string;
+  prompt: string;
+  starters: string[];
+};
+
+export type LearningResearchModule = {
+  type: "research";
+  question: string;
+  hints: string[];
+};
+
+export type LearningAiChatModule = {
+  type: "ai_chat";
+  title: string;
+  starter: string;
+  followUps: string[];
+};
+
 export type LearningProgressModule = {
   type: "progress";
   label: string;
@@ -84,6 +137,13 @@ export type LearningModule =
   | LearningQuizModule
   | LearningWonderModule
   | LearningChallengeModule
+  | LearningConversationPromptsModule
+  | LearningMatchModule
+  | LearningReadingModule
+  | LearningProjectModule
+  | LearningStoryModule
+  | LearningResearchModule
+  | LearningAiChatModule
   | LearningProgressModule
   | LearningRelatedModule
   | LearningSaveStatusModule

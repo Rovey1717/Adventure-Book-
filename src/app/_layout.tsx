@@ -4,12 +4,13 @@ import { Fredoka_700Bold } from "@expo-google-fonts/fredoka/700Bold";
 import { Nunito_400Regular } from "@expo-google-fonts/nunito/400Regular";
 import { Nunito_600SemiBold } from "@expo-google-fonts/nunito/600SemiBold";
 import { Nunito_700Bold } from "@expo-google-fonts/nunito/700Bold";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AppProvider } from "@/context/AppContext";
 import { colors } from "@/constants/theme";
+import { hasCompletedOnboarding } from "@/domain/parent/profile";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +25,33 @@ const edgeToEdge = {
     backgroundColor: colors.surface,
   },
 } as const;
+
+function OnboardingGate({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const segments = useSegments();
+  const [ready, setReady] = useState(false);
+  const rootSegment = segments[0];
+
+  useEffect(() => {
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const complete = hasCompletedOnboarding();
+    const inOnboarding = rootSegment === "onboarding";
+
+    if (!complete && !inOnboarding) {
+      router.replace("/onboarding");
+      return;
+    }
+    if (complete && inOnboarding) {
+      router.replace("/(tabs)");
+    }
+  }, [ready, router, rootSegment]);
+
+  return children;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -47,31 +75,34 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <StatusBar style="dark" />
-      <Stack screenOptions={edgeToEdge}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="name-discovery/index"
-          options={{ presentation: "modal" }}
-        />
-        <Stack.Screen
-          name="celebrate/[id]"
-          options={{ presentation: "modal" }}
-        />
-        <Stack.Screen
-          name="learning/[id]"
-          options={{ presentation: "fullScreenModal" }}
-        />
-        <Stack.Screen
-          name="adventure-unlock/[id]"
-          options={{ presentation: "modal" }}
-        />
-        <Stack.Screen name="memory/[id]" />
-        <Stack.Screen name="adventure/[id]" />
-        <Stack.Screen
-          name="library/[id]"
-          options={{ presentation: "modal" }}
-        />
-      </Stack>
+      <OnboardingGate>
+        <Stack screenOptions={edgeToEdge}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen
+            name="name-discovery/index"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="celebrate/[id]"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="learning/[id]"
+            options={{ presentation: "fullScreenModal" }}
+          />
+          <Stack.Screen
+            name="adventure-unlock/[id]"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen name="memory/[id]" />
+          <Stack.Screen name="adventure/[id]" />
+          <Stack.Screen
+            name="library/[id]"
+            options={{ presentation: "modal" }}
+          />
+        </Stack>
+      </OnboardingGate>
     </AppProvider>
   );
 }

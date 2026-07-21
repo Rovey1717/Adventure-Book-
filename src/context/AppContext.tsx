@@ -15,6 +15,7 @@ import type { PendingDiscovery } from "@/domain/discovery/pending";
 import type { JourneySnapshot } from "@/domain/journey/types";
 import type { Memory } from "@/domain/memory/types";
 import { getDemoLearningProfile } from "@/domain/parent/profile";
+import { familyAIProfileService } from "@/services/family/FamilyAIProfileService";
 import { MemoryService } from "@/services/MemoryService";
 import type { AdventureBoard } from "@/services/AdventureService";
 import { AdventureService } from "@/services/AdventureService";
@@ -140,6 +141,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const node = learningGraphService.getNodeByName(adventure.objectName);
       if (node) learningGraphService.child.markAdventureCompleted(node.id);
     }
+
+    // Keep FamilyAIProfile (SSOT) in sync with live memories + adventures.
+    familyAIProfileService.syncMemories(
+      nextMemories.map((memory) => ({
+        id: memory.id,
+        objectName: memory.objectName,
+        discoveredAt: memory.discoveredAt,
+        category: memory.category,
+        locationLabel: memory.locationLabel,
+      })),
+    );
+    const allAdventures = [
+      ...board.newAdventures,
+      ...board.continueAdventure,
+      ...board.completed,
+      ...board.suggested,
+      ...board.recentlyUnlocked,
+    ];
+    familyAIProfileService.syncAdventures(allAdventures);
+
     setMemories(nextMemories);
     setAdventureBoard(board);
     setJourney(snapshot);
@@ -151,6 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const card = learningAdventureService.generateForMemory(memory, names, {
       age: profile.age,
       spanishEnabled: profile.spanishEnabled,
+      learningMode: profile.learningMode,
     });
     return memoryService.setLearningCard(memory.id, card);
   }, []);
@@ -162,6 +184,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const result = await work();
         // Generate Learning Adventure in the background immediately after save.
         const withCard = await attachLearningCard(result.memory);
+        familyAIProfileService.recordMemory(withCard, result.adventures);
+        familyAIProfileService.syncAdventures(result.adventures);
         const nextResult = { ...result, memory: withCard };
         setLastCapture(nextResult);
         await refresh();

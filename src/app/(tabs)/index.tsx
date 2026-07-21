@@ -36,6 +36,7 @@ import { SoftCard } from "@/components/ui/SoftCard";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { LibraryEntry } from "@/domain/library/types";
+import { useLearningMode } from "@/hooks/useLearningMode";
 
 /**
  * Discover — real life comes first.
@@ -55,6 +56,7 @@ export default function DiscoverScreen() {
     savedToast,
     clearSavedToast,
   } = useApp();
+  const { definition: learningMode } = useLearningMode();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facing, setFacing] = useState<CameraType>("back");
@@ -295,7 +297,12 @@ export default function DiscoverScreen() {
       />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.brand}>✨ Adventure Book</Text>
+        <View style={styles.brandRow}>
+          <Text style={styles.brand}>✨ Adventure Book</Text>
+          <View style={styles.learningModePill}>
+            <Text style={styles.learningModeText}>{learningMode.shortLabel}</Text>
+          </View>
+        </View>
         <DiscoverSearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -407,6 +414,23 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(26,43,74,0.35)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  learningModePill: {
+    backgroundColor: "rgba(255,255,255,0.28)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  learningModeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.cameraInk,
   },
   modeHintPill: {
     alignSelf: "flex-start",

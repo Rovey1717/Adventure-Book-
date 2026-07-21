@@ -27,6 +27,7 @@ function defaultChild(input: CreateChildNodeInput): ChildNode {
     learningLanguages: input.learningLanguages ?? [],
     spanishEnabled: input.spanishEnabled ?? false,
     favoriteCategories: input.favoriteCategories ?? [],
+    coExplorers: input.coExplorers ?? [],
     completedNodeIds: input.completedNodeIds ?? [],
     completedAdventureIds: input.completedAdventureIds ?? [],
     masteredLearningObjectives: input.masteredLearningObjectives ?? [],

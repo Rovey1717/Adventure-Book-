@@ -106,17 +106,10 @@ export class RecommendationEngine {
   private async recommendDiscoveries(
     input: ScorerInput,
   ): Promise<RecommendationItem<WorldNodeId>[]> {
+    // Never recommend random catalog content. Without a current discovery,
+    // FamilyAI.nextMeaningfulExperience() is the grounded path.
     if (!input.currentWorldNodeId) {
-      const all = await this.world.list();
-      return all
-        .filter((node) => !input.childCompleted.has(node.id))
-        .slice(0, input.limit)
-        .map((node) => ({
-          id: node.id,
-          score: 0.3,
-          reasonCodes: ["unexplored_world"],
-          reason: `Explore ${node.name}`,
-        }));
+      return [];
     }
 
     const edges = await this.graphs.relationships.findFrom(
