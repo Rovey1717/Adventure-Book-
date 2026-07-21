@@ -1,51 +1,54 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  AdventureBanner,
-  ContinueExploring,
-  ConversationPromptsSection,
-  DiscoveryHero,
-  DiscoveryMemoryStatsBar,
-  FactSection,
-  FamilyMemoryCard,
-  LearningStages,
-  MemoryTimeline,
-  QuizSection,
-  QuickActionGrid,
-  RelatedDiscoveries,
-  VideoCard,
-  WhyThisIsNext,
-  quickActionsForMode,
-  type QuickActionId,
-} from "@/components/discovery-card";
+import { ContinueLearningHero } from "@/components/discovery-card/ContinueLearningHero";
+import { DiscoveryCardAdventuresSection } from "@/components/discovery-card/DiscoveryCardAdventuresSection";
+import { DiscoveryCardCollectionsSection } from "@/components/discovery-card/DiscoveryCardCollectionsSection";
+import { DiscoveryCardLearningJourneySection } from "@/components/discovery-card/DiscoveryCardLearningJourneySection";
+import { DiscoveryCardMyJourneySection } from "@/components/discovery-card/DiscoveryCardMyJourneySection";
+import { DiscoveryCardSectionTabs } from "@/components/discovery-card/DiscoveryCardSectionTabs";
+import { DiscoveryCardWhatsNextSection } from "@/components/discovery-card/DiscoveryCardWhatsNextSection";
+import { DiscoveryHero } from "@/components/discovery-card/DiscoveryHero";
+import { ExplorerProgressBar } from "@/components/discovery-card/ExplorerProgressBar";
+import { LessonPlayer } from "@/components/discovery-card/LessonPlayer";
 import { MagicalBackground, PlayfulPressable } from "@/components/ui";
-import { colors, fonts, radii, shadows, space } from "@/constants/theme";
+import { colors, fonts, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { buildAdventureJourneyPath } from "@/domain/discovery-card/adventureJourneyPath";
+import { collectionsForDiscoveryCard } from "@/domain/discovery-card/collectionsForCard";
+import { familyAiNextLesson } from "@/domain/discovery-card/familyAiNextLesson";
+import {
+  buildLearningJourneyPath,
+  type LearningJourneyStep,
+  type LearningJourneyStepId,
+} from "@/domain/discovery-card/learningJourneyPath";
+import {
+  DISCOVERY_CARD_DEFAULT_SECTION,
+  sectionsForIds,
+  type DiscoveryCardSectionId,
+} from "@/domain/discovery-card/sections";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
-import { getLearningProfile } from "@/domain/parent/profile";
+import type { ExplorerProgress } from "@/domain/progression/explorerXp";
+import { progressiveDisclosureForAge } from "@/domain/ui/progressiveDisclosure";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import {
   DEMO_INTELLIGENCE_CHILD_ID,
   getIntelligenceLayer,
 } from "@/intelligence/createIntelligenceLayer";
+import {
+  buildNextMeaningfulExperienceInput,
+  NextMeaningfulExperienceEngine,
+} from "@/intelligence/engines/NextMeaningfulExperienceEngine";
 import type { DiscoveryMemoryTimeline } from "@/intelligence/types/discoveryMemoryTimeline";
 
-type SectionKey = "watch" | "facts" | "quiz" | "activities" | "adventure";
+const nextEngine = new NextMeaningfulExperienceEngine();
 
 /**
- * Discovery Card generated from a Learning Graph node.
- * Related / Continue Exploring / Next Adventure all come from graph traversal.
- *
- * Memory Timeline queries the Memory Graph — the card stores no memory data.
+ * Lifelong Discovery Card — living destination for one discovery.
+ * Continue Learning is always the primary next action.
+ * UI complexity grows with the child via progressive disclosure.
  */
 export default function LibraryDiscoveryCardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,13 +62,25 @@ export default function LibraryDiscoveryCardScreen() {
     toggleFavorite,
     startAdventure,
   } = useApp();
-  const { features, definition, profile } = useLearningMode();
-  const scrollRef = useRef<ScrollView>(null);
-  const sectionY = useRef<Partial<Record<SectionKey, number>>>({});
+  const { features, profile: learningProfile } = useLearningMode();
+  const { profile: familyProfile } = useFamilyAIProfile();
+
+  const [section, setSection] = useState<DiscoveryCardSectionId>(
+    DISCOVERY_CARD_DEFAULT_SECTION,
+  );
+  const [activeLesson, setActiveLesson] = useState<LearningJourneyStep | null>(
+    null,
+  );
   const [soundHint, setSoundHint] = useState<string | null>(null);
-  const [, bump] = useState(0);
   const [memoryTimeline, setMemoryTimeline] =
     useState<DiscoveryMemoryTimeline | null>(null);
+  const [, bump] = useState(0);
+  const [explorerProgress, setExplorerProgress] = useState<ExplorerProgress>(
+    () => learningGraph.explorerProgress(),
+  );
+  const [levelUpFlash, setLevelUpFlash] = useState<ExplorerProgress | null>(
+    null,
+  );
 
   const entry = useMemo(
     () => (id ? library.getEntry(id) : null),
@@ -85,49 +100,147 @@ export default function LibraryDiscoveryCardScreen() {
     );
   }, [entry, library]);
 
-  const memory = useMemo(() => {
-    if (!entry) return null;
-    return (
-      memories.find(
-        (item) =>
-          item.objectName.toLowerCase() === entry.title.toLowerCase(),
-      ) ?? null
+  const discoveryMemories = useMemo(() => {
+    if (!entry) return [];
+    return memories.filter(
+      (item) =>
+        item.objectName.toLowerCase() === entry.title.toLowerCase(),
     );
   }, [entry, memories]);
+
+  const memory = discoveryMemories[0] ?? null;
 
   const related = useMemo(
     () => (id ? learningGraph.relatedDiscoveries(id, 4) : []),
     [id, learningGraph],
   );
 
-  const continueItems = useMemo(
-    () => (id ? learningGraph.continueExploring(id, 4) : []),
-    [id, learningGraph],
-  );
-
-  const recommendation = useMemo(() => {
-    if (!id) return null;
-    return learningGraph.recommendFrom(id);
-  }, [id, learningGraph, memories, bump]);
-
   const progress = useMemo(
     () => (id ? learningGraph.progressFor(id) : null),
     [id, learningGraph, bump, memories],
   );
 
-  const relatedAdventure = useMemo(() => {
-    if (!memory) return null;
-    return (
-      adventureBoard.continueAdventure.find(
-        (item) => item.memoryId === memory.id,
-      ) ??
-      adventureBoard.newAdventures.find((item) => item.memoryId === memory.id) ??
-      adventureBoard.recentlyUnlocked.find(
-        (item) => item.memoryId === memory.id,
-      ) ??
-      null
+  const discoveryAdventures = useMemo(() => {
+    if (!entry) return [];
+    const all = [
+      ...adventureBoard.newAdventures,
+      ...adventureBoard.continueAdventure,
+      ...adventureBoard.completed,
+      ...adventureBoard.recentlyUnlocked,
+    ];
+    const key = entry.title.toLowerCase();
+    const matched = all.filter(
+      (item) => item.objectName.toLowerCase() === key,
     );
-  }, [adventureBoard, memory]);
+    const seen = new Set<string>();
+    return matched.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }, [adventureBoard, entry]);
+
+  const relatedAdventure = discoveryAdventures[0] ?? null;
+
+  const collections = useMemo(() => {
+    if (!entry) return [];
+    const names = memories.map((item) => item.objectName);
+    return collectionsForDiscoveryCard(entry.title, names);
+  }, [entry, memories]);
+
+  const childAge = learningProfile.age ?? familyProfile.currentAge ?? 5;
+  const disclosure = useMemo(
+    () => progressiveDisclosureForAge(childAge),
+    [childAge],
+  );
+  const visibleSections = useMemo(
+    () => sectionsForIds(disclosure.discoverySections),
+    [disclosure.discoverySections],
+  );
+
+  const journeySteps = useMemo(() => {
+    if (!entry) return [];
+    const completedSteps = Object.fromEntries(
+      (progress?.completedLessonSteps ?? []).map((stepId) => [stepId, true]),
+    ) as Partial<Record<LearningJourneyStepId, boolean>>;
+    const neighbors = related.slice(0, 3).map((item) => ({
+      id: item.id,
+      name: item.name,
+      emoji: item.emoji,
+    }));
+    return buildLearningJourneyPath({
+      discoveryTitle: entry.title,
+      childAge,
+      discovered: !!memory,
+      completedSteps,
+      watchedVideo: progress?.watchedVideo,
+      heardPronunciation: progress?.watchedVideo,
+      completedQuiz: progress?.completedQuiz,
+      completedPictureQuiz: progress?.completedQuiz,
+      completedChallenge: progress?.completedAdventure,
+      foundThree:
+        !!completedSteps.find_three ||
+        !!completedSteps.find_another ||
+        (discoveryMemories.length ?? 0) >= 3,
+      masteryScore: progress?.masteryScore,
+      neighbors,
+      features,
+    });
+  }, [
+    entry,
+    memory,
+    progress,
+    features,
+    childAge,
+    discoveryMemories.length,
+    related,
+  ]);
+
+  const familyNext = useMemo(
+    () =>
+      familyAiNextLesson({
+        steps: journeySteps,
+        discoveryTitle: entry?.title ?? "discovery",
+        childName: learningProfile.name,
+        childAge,
+        recentCompletedIds: progress?.completedLessonSteps,
+      }),
+    [
+      journeySteps,
+      entry?.title,
+      learningProfile.name,
+      childAge,
+      progress?.completedLessonSteps,
+    ],
+  );
+  const nextLesson = familyNext?.step ?? null;
+
+  const adventurePath = useMemo(() => {
+    if (!entry) return [];
+    const completedCount = discoveryAdventures.filter(
+      (item) => item.status === "completed",
+    ).length;
+    const inProgressCount = discoveryAdventures.filter(
+      (item) => item.status === "in_progress",
+    ).length;
+    return buildAdventureJourneyPath({
+      discoveryTitle: entry.title,
+      discovered: !!memory,
+      foundOne: !!memory,
+      completedAdventureCount: completedCount,
+      inProgressAdventureCount: inProgressCount,
+      adventureCompleted: completedCount >= 4,
+    });
+  }, [entry, memory, discoveryAdventures]);
+
+  const whatsNext = useMemo(() => {
+    if (!entry) return null;
+    return nextEngine.recommend(
+      buildNextMeaningfulExperienceInput(familyProfile, {
+        currentDiscovery: entry.title,
+      }),
+    );
+  }, [entry, familyProfile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,46 +263,19 @@ export default function LibraryDiscoveryCardScreen() {
     };
   }, [entry, memories]);
 
-  const onSectionLayout =
-    (key: SectionKey) => (event: LayoutChangeEvent) => {
-      sectionY.current[key] = event.nativeEvent.layout.y;
-    };
+  useEffect(() => {
+    setSection(DISCOVERY_CARD_DEFAULT_SECTION);
+    setActiveLesson(null);
+  }, [entry?.id]);
 
-  const scrollTo = (key: SectionKey) => {
-    const y = sectionY.current[key];
-    if (typeof y === "number") {
-      scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+  useEffect(() => {
+    if (!disclosure.discoverySections.includes(section)) {
+      setSection(
+        disclosure.discoverySections[0] ?? DISCOVERY_CARD_DEFAULT_SECTION,
+      );
+      setActiveLesson(null);
     }
-  };
-
-  const openNode = (nodeId: string) => {
-    router.push(`/library/${nodeId}`);
-  };
-
-  const onQuickAction = (actionId: QuickActionId) => {
-    switch (actionId) {
-      case "watch":
-        scrollTo("watch");
-        break;
-      case "sounds":
-      case "languages":
-        setSoundHint(
-          actionId === "sounds"
-            ? `Playing ${entry?.title ?? "discovery"} sounds…`
-            : `${entry?.title ?? "Word"} · ${entry?.pronunciation ?? ""}`,
-        );
-        break;
-      case "facts":
-        scrollTo("facts");
-        break;
-      case "quiz":
-        scrollTo("quiz");
-        break;
-      case "activities":
-        scrollTo("activities");
-        break;
-    }
-  };
+  }, [disclosure.discoverySections, section]);
 
   const onStartAdventure = async () => {
     if (!memory) return;
@@ -201,6 +287,32 @@ export default function LibraryDiscoveryCardScreen() {
       return;
     }
     router.push("/(tabs)/adventures");
+  };
+
+  const openLessonActivity = (step: LearningJourneyStep) => {
+    if (step.status === "locked" || step.status === "coming_soon") return;
+    // Every tap begins an interactive lesson — never a static info card.
+    setSection("continue_learning");
+    setActiveLesson(step);
+  };
+
+  const completeLesson = (stepId: LearningJourneyStepId) => {
+    if (!id) return;
+    const step =
+      activeLesson?.id === stepId
+        ? activeLesson
+        : journeySteps.find((item) => item.id === stepId);
+    const result = learningGraph.markLessonComplete(
+      id,
+      stepId,
+      step?.xpKind ?? "digital",
+    );
+    setExplorerProgress(result);
+    if (result.justLeveledUp) {
+      setLevelUpFlash(result);
+    }
+    bump((value) => value + 1);
+    setActiveLesson(null);
   };
 
   if (!entry) {
@@ -226,23 +338,21 @@ export default function LibraryDiscoveryCardScreen() {
       : graphNode?.category === "concepts"
         ? "Science"
         : category?.title ?? "Garden";
-  const discovered = !!memory;
   const metaDate = memory
     ? new Date(memory.discoveredAt).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
       })
-    : learningGraph.world.ecosystemTitle();
+    : "Lifelong learning home";
 
-  const masteryLabel = progress
-    ? `Mastery ${progress.masteryScore}%`
-    : null;
+  const adventuresCompleted = discoveryAdventures.filter(
+    (item) => item.status === "completed",
+  ).length;
 
   return (
     <MagicalBackground variant="cream" decorated={false}>
       <ScrollView
-        ref={scrollRef}
         contentInsetAdjustmentBehavior="never"
         contentContainerStyle={[
           styles.content,
@@ -263,7 +373,7 @@ export default function LibraryDiscoveryCardScreen() {
           </PlayfulPressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>{entry.title}</Text>
-            <Text style={styles.headerSubtitle}>Discovery Card</Text>
+            <Text style={styles.headerSubtitle}>Your living discovery</Text>
           </View>
           <PlayfulPressable
             style={styles.circleButton}
@@ -296,269 +406,202 @@ export default function LibraryDiscoveryCardScreen() {
           }
         />
 
-        {memoryTimeline ? (
-          <DiscoveryMemoryStatsBar stats={memoryTimeline.stats} />
+        {soundHint && !activeLesson ? (
+          <Text style={styles.soundHint}>{soundHint}</Text>
         ) : null}
 
-        {graphNode?.description ? (
-          <Text style={styles.description}>{graphNode.description}</Text>
+        {!activeLesson ? (
+          <ExplorerProgressBar
+            progress={levelUpFlash ?? explorerProgress}
+            compact
+          />
         ) : null}
 
-        {progress ? (
-          <View style={styles.masteryRow}>
-            <Text style={styles.masteryText}>
-              Video {progress.watchedVideo ? "✅" : "○"} ·{" "}
-              {features.quizzes
-                ? "Quiz"
-                : features.conversationPrompts
-                  ? "Coach"
-                  : "Learn"}{" "}
-              {progress.completedQuiz ? "✅" : "○"} · Adventure{" "}
-              {progress.completedAdventure ? "✅" : "○"} · Mastery{" "}
-              {progress.masteryScore}%
-            </Text>
+        {familyNext && !activeLesson ? (
+          <ContinueLearningHero
+            next={familyNext}
+            discoveryEmoji={emoji}
+            preferIconsOverText={disclosure.preferIconsOverText}
+            onContinue={() => {
+              setSection("continue_learning");
+              openLessonActivity(familyNext.step);
+            }}
+          />
+        ) : null}
+
+        {visibleSections.length > 1 && !activeLesson ? (
+          <DiscoveryCardSectionTabs
+            active={section}
+            sections={visibleSections}
+            iconsOnly={disclosure.preferIconsOverText}
+            onChange={(next) => {
+              setSection(next);
+              if (next !== "continue_learning") setActiveLesson(null);
+            }}
+          />
+        ) : null}
+
+        {section === "my_journey" ? (
+          <DiscoveryCardMyJourneySection
+            discoveryTitle={entry.title}
+            timeline={memoryTimeline}
+            memories={discoveryMemories}
+            adventuresCompleted={adventuresCompleted}
+          />
+        ) : null}
+
+        {section === "continue_learning" ? (
+          <View style={styles.stack}>
+            {activeLesson ? (
+              <LessonPlayer
+                step={activeLesson}
+                context={{
+                  discoveryTitle: entry.title,
+                  emoji,
+                  pronunciation: entry.pronunciation,
+                  vocabulary: entry.vocabulary,
+                  facts: entry.facts,
+                  quiz: entry.quiz,
+                  childName: learningProfile.name,
+                  connectionName: activeLesson.connectionName,
+                  connectionEmoji: activeLesson.connectionEmoji,
+                }}
+                onComplete={completeLesson}
+                onBack={() => setActiveLesson(null)}
+                onOpenDiscover={() => router.push("/(tabs)")}
+              />
+            ) : (
+              <DiscoveryCardLearningJourneySection
+                discoveryTitle={entry.title}
+                steps={
+                  disclosure.showFullLearningPath
+                    ? journeySteps
+                    : nextLesson
+                      ? [nextLesson]
+                      : journeySteps.slice(0, 1)
+                }
+                onSelectStep={openLessonActivity}
+              />
+            )}
           </View>
         ) : null}
 
-        {soundHint ? <Text style={styles.soundHint}>{soundHint}</Text> : null}
-
-        <QuickActionGrid
-          actions={quickActionsForMode(features)}
-          onPress={onQuickAction}
-        />
-
-        <View onLayout={onSectionLayout("adventure")}>
-          <AdventureBanner
-            objectName={entry.title}
-            unlocked={discovered}
-            onStart={() => {
+        {section === "adventures" &&
+        disclosure.discoverySections.includes("adventures") ? (
+          <DiscoveryCardAdventuresSection
+            discoveryTitle={entry.title}
+            path={adventurePath}
+            adventures={discoveryAdventures}
+            discovered={!!memory}
+            onStartPrimary={() => {
+              void onStartAdventure();
+            }}
+            onOpenAdventure={(adventureId) =>
+              router.push(`/adventure/${adventureId}`)
+            }
+            onSelectPathStep={() => {
               void onStartAdventure();
             }}
           />
-        </View>
-
-        <RelatedDiscoveries items={related} onSelect={openNode} />
-
-        <WhyThisIsNext
-          recommendation={recommendation}
-          masteryLabel={
-            recommendation?.fromNodeId === id ? masteryLabel : null
-          }
-          onOpen={openNode}
-        />
-
-        <LearningStages
-          objectName={entry.title}
-          childName={
-            learningGraph.child.getProfile().name || getLearningProfile().name
-          }
-        />
-
-        {entry.hasVideo ? (
-          <View onLayout={onSectionLayout("watch")}>
-            <VideoCard
-              objectName={entry.title}
-              childName={learningGraph.child.getProfile().name}
-              onPlay={() => {
-                if (id) {
-                  learningGraph.markWatchedVideo(id);
-                  bump((value) => value + 1);
-                }
-                Alert.alert(
-                  "Video coming soon",
-                  `A real-world ${entry.title.toLowerCase()} video will play here.`,
-                );
-              }}
-            />
-          </View>
         ) : null}
 
-        {memory ? <FamilyMemoryCard memory={memory} /> : null}
-
-        <View onLayout={onSectionLayout("facts")}>
-          <FactSection facts={entry.facts} vocabulary={entry.vocabulary} />
-        </View>
-
-        {features.quizzes && entry.hasQuiz ? (
-          <View onLayout={onSectionLayout("quiz")}>
-            <QuizSection
-              objectName={entry.title}
-              questions={entry.quiz}
-              onComplete={() => {
-                if (id) {
-                  learningGraph.markQuizCompleted(id);
-                  bump((value) => value + 1);
-                }
-              }}
-            />
-          </View>
+        {section === "collections" &&
+        disclosure.discoverySections.includes("collections") ? (
+          <DiscoveryCardCollectionsSection
+            discoveryTitle={entry.title}
+            collections={collections}
+          />
         ) : null}
 
-        {features.conversationPrompts &&
-        features.parentPromptCount > 0 ? (
-          <View onLayout={onSectionLayout("quiz")}>
-            <ConversationPromptsSection
-              objectName={entry.title}
-              childName={profile.name}
-              promptCount={features.parentPromptCount}
-            />
-          </View>
+        {section === "whats_next" &&
+        disclosure.discoverySections.includes("whats_next") ? (
+          <DiscoveryCardWhatsNextSection
+            discoveryTitle={entry.title}
+            nextLesson={nextLesson}
+            experience={whatsNext}
+            onOpenLesson={(step) => {
+              setSection("continue_learning");
+              openLessonActivity(step);
+            }}
+          />
         ) : null}
-
-        <View
-          style={styles.activitiesNote}
-          onLayout={onSectionLayout("activities")}
-        >
-          <Text style={styles.activitiesTitle}>
-            {features.projects ? "🛠️ Projects" : "🎯 Activities"}
-          </Text>
-          <Text style={styles.activitiesBody}>
-            {definition.tone.libraryHint}. Unlock more after a real-world{" "}
-            {entry.title} discovery.
-          </Text>
-        </View>
-
-        {memoryTimeline ? (
-          <MemoryTimeline timeline={memoryTimeline} emoji={emoji} />
-        ) : null}
-
-        <ContinueExploring items={continueItems} onSelect={openNode} />
-
-        <Text style={styles.footnote}>
-          Connected through the Garden Learning Graph. Memories and Adventures
-          still come from Discover — not from browsing alone.
-        </Text>
       </ScrollView>
     </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 28,
-    gap: 16,
-  },
   content: {
     paddingHorizontal: space.screen,
-    gap: 18,
+    gap: 14,
+  },
+  stack: {
+    gap: 12,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
+    gap: 10,
   },
   circleButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surfaceRaised,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.pastelBlue,
+    backgroundColor: colors.surfaceRaised,
     ...shadows.soft,
   },
   circleButtonText: {
     fontFamily: fonts.display,
-    fontSize: 22,
+    fontSize: 28,
     color: colors.navy,
-    lineHeight: 24,
+    marginTop: -2,
   },
   headerCopy: {
-    alignItems: "center",
+    flex: 1,
     gap: 2,
   },
   headerTitle: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.displaySemi,
     fontSize: 22,
     color: colors.navy,
   },
   headerSubtitle: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 13,
-    color: colors.lavenderInk,
-  },
-  description: {
     fontFamily: fonts.body,
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.navySoft,
-    textAlign: "center",
-    marginTop: -6,
-  },
-  masteryRow: {
-    backgroundColor: colors.pastelBlue,
-    borderRadius: radii.xl,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 2,
-    borderColor: colors.skyBlue,
-  },
-  masteryText: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 14,
-    color: colors.navy,
-    textAlign: "center",
+    fontSize: 13,
+    color: colors.inkMuted,
   },
   soundHint: {
     fontFamily: fonts.bodySemi,
     fontSize: 14,
-    color: colors.lavenderInk,
-    textAlign: "center",
-    marginTop: -6,
+    color: colors.skyBlue,
   },
-  activitiesNote: {
-    backgroundColor: colors.pastelYellow,
-    borderRadius: radii.xl,
-    padding: 18,
-    gap: 6,
-    borderWidth: 2,
-    borderColor: colors.sunshine,
-  },
-  activitiesTitle: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 18,
-    color: colors.navy,
-  },
-  activitiesBody: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.navySoft,
-  },
-  footnote: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.inkSoft,
-    textAlign: "center",
-    marginTop: 4,
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
   },
   missingEmoji: {
-    fontSize: 48,
+    fontSize: 40,
   },
   missingTitle: {
-    fontFamily: fonts.display,
-    fontSize: 28,
+    fontFamily: fonts.displaySemi,
+    fontSize: 22,
     color: colors.navy,
-    textAlign: "center",
   },
   backPill: {
-    backgroundColor: colors.skyBlue,
-    borderRadius: radii.pill,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    minHeight: 48,
-    justifyContent: "center",
-    ...shadows.soft,
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: colors.pastelBlue,
   },
   backPillText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.surfaceRaised,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.navy,
   },
 });

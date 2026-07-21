@@ -1,15 +1,23 @@
 import type {
+  ChildExplorerState,
   ChildNodeProgress,
   ChildProfile,
 } from "@/domain/graph/types";
+import {
+  explorerProgressFromXp,
+  xpForLessonKind,
+  type ExplorerProgress,
+  type LessonXpKind,
+} from "@/domain/progression/explorerXp";
 import { getDemoLearningProfile } from "@/domain/parent/profile";
 
 /**
  * Per-child learning state on the world graph.
- * Separate from Adventure Book memories — this tracks mastery signals.
+ * Separate from Adventure Book memories — this tracks mastery + Explorer XP.
  */
 export class ChildKnowledgeGraph {
   private readonly progress = new Map<string, ChildNodeProgress>();
+  private totalXp = 0;
 
   constructor(
     private readonly profile: ChildProfile = (() => {
@@ -26,21 +34,38 @@ export class ChildKnowledgeGraph {
     return this.profile;
   }
 
+  getExplorerState(): ChildExplorerState {
+    return { totalXp: this.totalXp };
+  }
+
+  getExplorerProgress(): ExplorerProgress {
+    return explorerProgressFromXp(this.totalXp);
+  }
+
   getProgress(nodeId: string): ChildNodeProgress {
-    return (
-      this.progress.get(nodeId) ?? {
+    const stored = this.progress.get(nodeId);
+    if (!stored) {
+      return {
         nodeId,
         discovered: false,
         watchedVideo: false,
         completedQuiz: false,
         completedAdventure: false,
+        completedLessonSteps: [],
         masteryScore: 0,
-      }
-    );
+      };
+    }
+    return {
+      ...stored,
+      completedLessonSteps: stored.completedLessonSteps ?? [],
+    };
   }
 
   listProgress(): ChildNodeProgress[] {
-    return [...this.progress.values()];
+    return [...this.progress.values()].map((item) => ({
+      ...item,
+      completedLessonSteps: item.completedLessonSteps ?? [],
+    }));
   }
 
   discoveredNodeIds(): string[] {
@@ -74,11 +99,53 @@ export class ChildKnowledgeGraph {
     const current = this.getProgress(nodeId);
     this.progress.set(
       nodeId,
-      this.withMastery({ ...current, completedAdventure: true, discovered: true }),
+      this.withMastery({
+        ...current,
+        completedAdventure: true,
+        discovered: true,
+      }),
     );
   }
 
-  /** Sync discovery flags from Adventure Book memories (by graph node id / name match handled upstream). */
+  /**
+   * Complete an interactive Learning Journey lesson and award Explorer XP.
+   * Auto-called when the LessonPlayer finishes — never a manual mark.
+   */
+  markLessonComplete(
+    nodeId: string,
+    stepId: string,
+    xpKind: LessonXpKind = "digital",
+  ): ExplorerProgress {
+    const previousXp = this.totalXp;
+    const current = this.getProgress(nodeId);
+    const alreadyDone = current.completedLessonSteps.includes(stepId);
+
+    if (!alreadyDone) {
+      const completedLessonSteps = [...current.completedLessonSteps, stepId];
+      const next: ChildNodeProgress = {
+        ...current,
+        completedLessonSteps,
+        watchedVideo:
+          current.watchedVideo ||
+          stepId === "hear_pronunciation" ||
+          stepId === "learn_parts",
+        completedQuiz:
+          current.completedQuiz ||
+          stepId.startsWith("quiz_") ||
+          stepId === "match_picture",
+        completedAdventure:
+          current.completedAdventure ||
+          stepId === "find_three" ||
+          stepId === "find_another" ||
+          stepId === "mastery",
+      };
+      this.progress.set(nodeId, this.withMastery(next));
+      this.totalXp += xpForLessonKind(xpKind);
+    }
+
+    return explorerProgressFromXp(this.totalXp, previousXp);
+  }
+
   syncDiscovered(nodeIds: string[]) {
     for (const nodeId of nodeIds) {
       this.markDiscovered(nodeId);
@@ -87,10 +154,15 @@ export class ChildKnowledgeGraph {
 
   private withMastery(progress: ChildNodeProgress): ChildNodeProgress {
     let score = 0;
-    if (progress.discovered) score += 25;
-    if (progress.watchedVideo) score += 25;
-    if (progress.completedQuiz) score += 25;
-    if (progress.completedAdventure) score += 25;
-    return { ...progress, masteryScore: score };
+    if (progress.discovered) score += 20;
+    if (progress.watchedVideo) score += 20;
+    if (progress.completedQuiz) score += 20;
+    if (progress.completedAdventure) score += 20;
+    const lessonBonus = Math.min(
+      20,
+      (progress.completedLessonSteps?.length ?? 0) * 4,
+    );
+    score += lessonBonus;
+    return { ...progress, masteryScore: Math.min(100, score) };
   }
 }

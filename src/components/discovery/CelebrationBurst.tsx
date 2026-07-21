@@ -4,7 +4,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  View,
   Vibration,
   useWindowDimensions,
 } from "react-native";
@@ -21,11 +20,17 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors, fonts, motion, radii, randomPraise } from "@/constants/theme";
+import { CelebrationProgressChip } from "@/components/discovery/CelebrationProgressChip";
+import { colors, fonts, motion } from "@/constants/theme";
+import { pickCelebration } from "@/domain/celebration/messages";
 
 type Props = {
   discoveryName: string;
+  childName: string;
   emoji?: string;
+  explorerLevel?: number;
+  discoveryCount?: number;
+  seed?: string;
   onFinished: () => void;
   durationMs?: number;
 };
@@ -53,12 +58,16 @@ const STAR_COLORS = [
 
 /**
  * Discovery celebration (2–3s): confetti burst, floating stars,
- * glowing background, "You Found It!", reward badge pop.
+ * personalized cheer with the child's name, progress chip.
  * Tap anywhere to skip.
  */
 export function CelebrationBurst({
   discoveryName,
+  childName,
   emoji = "✨",
+  explorerLevel,
+  discoveryCount,
+  seed,
   onFinished,
   durationMs = motion.celebration,
 }: Props) {
@@ -69,7 +78,16 @@ export function CelebrationBurst({
   const message = useSharedValue(0);
   const onFinishedRef = useRef(onFinished);
   const finishedRef = useRef(false);
-  const praiseRef = useRef(randomPraise());
+  const celebrationRef = useRef(
+    pickCelebration({
+      childName,
+      discoveryName,
+      context: "burst",
+      seed: seed ?? `${childName}:${discoveryName}:burst`,
+      explorerLevel,
+      discoveryCount,
+    }),
+  );
 
   onFinishedRef.current = onFinished;
 
@@ -132,6 +150,8 @@ export function CelebrationBurst({
     transform: [{ scale: 0.85 + message.value * 0.15 }],
   }));
 
+  const celebration = celebrationRef.current;
+
   return (
     <Pressable
       style={styles.rootPress}
@@ -153,7 +173,6 @@ export function CelebrationBurst({
           style={[styles.glow, glowStyle]}
         />
 
-        {/* Confetti particles */}
         {CONFETTI.map((glyph, index) => (
           <ConfettiPiece
             key={`c-${index}`}
@@ -164,7 +183,6 @@ export function CelebrationBurst({
           />
         ))}
 
-        {/* Floating stars */}
         {STAR_COLORS.map((color, index) => (
           <FloatingStar
             key={`s-${index}`}
@@ -184,14 +202,26 @@ export function CelebrationBurst({
         </Animated.View>
 
         <Animated.View style={messageStyle}>
-          <Text style={styles.found}>You Found It!</Text>
-          <Text style={styles.title}>You found a {discoveryName}!</Text>
-          <Text style={styles.praise}>{praiseRef.current}</Text>
+          <Text style={styles.found}>
+            {celebration.emoji} {celebration.headline}
+          </Text>
+          <Text style={styles.title}>{celebration.subline}</Text>
+          <Text style={styles.praise}>You found a {discoveryName}!</Text>
         </Animated.View>
 
         <Animated.View style={[styles.badge, badgeStyle]}>
-          <Text style={styles.badgeEmoji}>🏅</Text>
-          <Text style={styles.badgeText}>Discovery Star</Text>
+          <CelebrationProgressChip
+            progress={celebration.progress}
+            secondary={
+              explorerLevel != null
+                ? {
+                    kind: "explorer_level",
+                    emoji: "⭐",
+                    label: `Explorer Level ${explorerLevel}`,
+                  }
+                : undefined
+            }
+          />
         </Animated.View>
 
         <Text style={styles.skip}>Tap to continue</Text>
@@ -358,53 +388,29 @@ const styles = StyleSheet.create({
   },
   found: {
     fontFamily: fonts.display,
-    fontSize: 36,
-    lineHeight: 42,
+    fontSize: 32,
+    lineHeight: 38,
     color: colors.coralDeep,
     textAlign: "center",
   },
   title: {
     fontFamily: fonts.displaySemi,
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 20,
+    lineHeight: 26,
     color: colors.navy,
     textAlign: "center",
-    marginTop: 4,
+    marginTop: 6,
   },
   praise: {
     fontFamily: fonts.bodyBold,
-    fontSize: 18,
+    fontSize: 16,
     color: colors.lavenderInk,
     textAlign: "center",
     marginTop: 6,
   },
   badge: {
-    marginTop: 14,
-    flexDirection: "row",
+    marginTop: 10,
     alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.surfaceRaised,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: radii.pill,
-    borderWidth: 2,
-    borderColor: colors.sunshine,
-    minHeight: 48,
-    ...{
-      shadowColor: colors.sunshine,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 10,
-      elevation: 4,
-    },
-  },
-  badgeEmoji: {
-    fontSize: 22,
-  },
-  badgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 16,
-    color: colors.navy,
   },
   skip: {
     fontFamily: fonts.body,

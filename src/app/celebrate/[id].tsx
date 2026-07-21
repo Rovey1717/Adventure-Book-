@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CelebrationProgressChip } from "@/components/discovery/CelebrationProgressChip";
 import { NextMeaningfulExperienceCard } from "@/components/family/NextMeaningfulExperienceCard";
 import {
   MagicalBackground,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { celebrationFirstName, pickCelebration } from "@/domain/celebration/messages";
 import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import {
@@ -23,7 +25,7 @@ const nextEngine = new NextMeaningfulExperienceEngine();
 
 /**
  * Decision screen after a discovery is permanently saved.
- * Shows Family AI's next meaningful experience (never random).
+ * Celebrates the child by name, then Family AI's next meaningful experience.
  */
 export default function DiscoverySavedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,6 +41,19 @@ export default function DiscoverySavedScreen() {
   );
 
   const name = memory?.objectName ?? "Discovery";
+
+  const celebration = useMemo(
+    () =>
+      pickCelebration({
+        childName: profile.childName,
+        discoveryName: name,
+        context: "decision",
+        seed: `${memory?.id ?? name}:decision`,
+        explorerLevel: profile.currentLevel,
+        discoveryCount: memories.length,
+      }),
+    [memories.length, memory?.id, name, profile.childName, profile.currentLevel],
+  );
 
   const nextMeaningful = useMemo(
     () =>
@@ -67,12 +82,20 @@ export default function DiscoverySavedScreen() {
           <Text style={styles.badgeText}>✓ Saved to Adventure Book</Text>
         </View>
 
-        <Text style={styles.eyebrow}>{definition.tone.celebrateEyebrow}</Text>
-        <Text style={styles.title}>You found a {name}!</Text>
-        <Text style={styles.body}>
-          Your discovery has been saved. Family AI already knows what meaningful
-          thing comes next — never a random topic.
+        <Text style={styles.eyebrow}>
+          {celebration.emoji} {celebration.headline}
         </Text>
+        <Text style={styles.title}>You found a {name}!</Text>
+        <Text style={styles.body}>{celebration.subline}</Text>
+
+        <CelebrationProgressChip
+          progress={celebration.progress}
+          secondary={{
+            kind: "explorer_level",
+            emoji: "⭐",
+            label: `Explorer Level ${profile.currentLevel}`,
+          }}
+        />
 
         <NextMeaningfulExperienceCard experience={nextMeaningful} />
 
@@ -80,6 +103,9 @@ export default function DiscoverySavedScreen() {
           <View style={styles.heroInner}>
             <Text style={styles.heroEmoji}>🌟</Text>
             <Text style={styles.heroLabel}>{definition.label}</Text>
+            <Text style={styles.heroHint}>
+              This moment belongs to {celebrationFirstName(profile.childName)}
+            </Text>
           </View>
         </SoftCard>
 
@@ -142,7 +168,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: fonts.bodyBold,
-    fontSize: 16,
+    fontSize: 18,
     color: colors.coralDeep,
   },
   title: {
@@ -174,6 +200,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.displaySemi,
     fontSize: 18,
     color: colors.navy,
+  },
+  heroHint: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.inkMuted,
+    textAlign: "center",
   },
   primary: {
     backgroundColor: colors.coral,

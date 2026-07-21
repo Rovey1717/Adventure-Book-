@@ -1,3 +1,14 @@
+export { DiscoveryCardSectionTabs } from "@/components/discovery-card/DiscoveryCardSectionTabs";
+export { ContinueLearningHero } from "@/components/discovery-card/ContinueLearningHero";
+export { ExplorerProgressBar } from "@/components/discovery-card/ExplorerProgressBar";
+export { LessonPlayer } from "@/components/discovery-card/LessonPlayer";
+export { DiscoveryCardMyJourneySection } from "@/components/discovery-card/DiscoveryCardMyJourneySection";
+export { DiscoveryCardLearnSection } from "@/components/discovery-card/DiscoveryCardLearnSection";
+export { DiscoveryCardLearningJourneySection } from "@/components/discovery-card/DiscoveryCardLearningJourneySection";
+export { DiscoveryCardAdventuresSection } from "@/components/discovery-card/DiscoveryCardAdventuresSection";
+export { DiscoveryCardCollectionsSection } from "@/components/discovery-card/DiscoveryCardCollectionsSection";
+export type { CollectionProgressView } from "@/components/discovery-card/DiscoveryCardCollectionsSection";
+export { DiscoveryCardWhatsNextSection } from "@/components/discovery-card/DiscoveryCardWhatsNextSection";
 export { DiscoveryHero } from "@/components/discovery-card/DiscoveryHero";
 export { QuickActionGrid } from "@/components/discovery-card/QuickActionGrid";
 export type {

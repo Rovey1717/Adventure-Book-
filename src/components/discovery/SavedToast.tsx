@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text } from "react-native";
 import Animated, {
   FadeInDown,
@@ -12,19 +12,27 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
+import { pickCelebrationCheer } from "@/domain/celebration/messages";
 
 type Props = {
   message: string;
+  childName?: string;
   onDone: () => void;
 };
 
 /**
- * Playful success toast after Continue Exploring.
+ * Playful success toast after Continue Exploring — personalized when possible.
  */
-export function SavedToast({ message, onDone }: Props) {
+export function SavedToast({ message, childName, onDone }: Props) {
   const insets = useSafeAreaInsets();
   const opacity = useSharedValue(1);
   const scale = useSharedValue(0.9);
+  const cheerRef = useRef(
+    pickCelebrationCheer({
+      childName: childName?.trim() || "Explorer",
+      seed: `${message}:${Date.now()}`,
+    }),
+  );
 
   useEffect(() => {
     scale.value = withSpring(1, { damping: 12, stiffness: 200 });
@@ -55,7 +63,7 @@ export function SavedToast({ message, onDone }: Props) {
     >
       <Text style={styles.star}>⭐</Text>
       <Text style={styles.text}>{message}</Text>
-      <Text style={styles.cheer}>Great Job!</Text>
+      <Text style={styles.cheer}>{cheerRef.current}</Text>
     </Animated.View>
   );
 }

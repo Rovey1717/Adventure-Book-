@@ -82,8 +82,8 @@ export const LEARNING_MODES: LearningModeDefinition[] = [
       aiConversations: false,
     },
     tone: {
-      celebrateEyebrow: "Saved for your family",
-      celebrateCta: "Get conversation starters",
+      celebrateEyebrow: "A forever memory for your family",
+      celebrateCta: "Celebrate together",
       learningCta: "Open parent coaching",
       adventuresSubtitle: "Short moments you lead — Family AI coaches you",
       journeySubtitle: "Connection you notice side by side",
@@ -114,7 +114,7 @@ export const LEARNING_MODES: LearningModeDefinition[] = [
       aiConversations: false,
     },
     tone: {
-      celebrateEyebrow: "Amazing Discovery!",
+      celebrateEyebrow: "You're growing as an explorer!",
       celebrateCta: "Celebrate & learn",
       learningCta: "Open Learning Card",
       adventuresSubtitle: "Quizzes, matching, and collection quests",
@@ -146,7 +146,7 @@ export const LEARNING_MODES: LearningModeDefinition[] = [
       aiConversations: true,
     },
     tone: {
-      celebrateEyebrow: "Discovery logged",
+      celebrateEyebrow: "Another step on your journey",
       celebrateCta: "Start a deeper dive",
       learningCta: "Open explorer card",
       adventuresSubtitle: "Projects, research, and bigger challenges",

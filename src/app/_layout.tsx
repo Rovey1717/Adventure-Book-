@@ -7,12 +7,14 @@ import { Nunito_700Bold } from "@expo-google-fonts/nunito/700Bold";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
+import * as SystemUI from "expo-system-ui";
 import { useEffect, useState, type ReactNode } from "react";
 import { AppProvider } from "@/context/AppContext";
 import { colors } from "@/constants/theme";
 import { hasCompletedOnboarding } from "@/domain/parent/profile";
 
 SplashScreen.preventAutoHideAsync();
+void SystemUI.setBackgroundColorAsync(colors.surface);
 
 export const unstable_settings = {
   anchor: "(tabs)",

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import { useLearningMode } from "@/hooks/useLearningMode";
 
 /**
@@ -46,6 +47,7 @@ export default function LearningScreen() {
   } = useApp();
 
   const { definition, features } = useLearningMode();
+  const { profile: familyProfile } = useFamilyAIProfile();
 
   const memoryId = typeof id === "string" ? id : id?.[0] ?? "";
   const celebrateParam = typeof celebrate === "string" ? celebrate : celebrate?.[0];
@@ -126,7 +128,11 @@ export default function LearningScreen() {
       {phase === "celebration" ? (
         <CelebrationBurst
           discoveryName={discoveryName}
+          childName={familyProfile.childName}
           emoji={heroEmoji}
+          explorerLevel={familyProfile.currentLevel}
+          discoveryCount={memories.length}
+          seed={`${memoryId}:burst`}
           onFinished={showLearningCard}
         />
       ) : (

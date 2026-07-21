@@ -85,6 +85,19 @@ export class LearningGraphService {
     this.child.markQuizCompleted(nodeId);
   }
 
+  /** Auto-complete a Learning Journey lesson after the interactive player finishes. */
+  markLessonComplete(
+    nodeId: string,
+    stepId: string,
+    xpKind?: import("@/domain/progression/explorerXp").LessonXpKind,
+  ) {
+    return this.child.markLessonComplete(nodeId, stepId, xpKind);
+  }
+
+  explorerProgress() {
+    return this.child.getExplorerProgress();
+  }
+
   markDiscovered(nodeId: string) {
     this.child.markDiscovered(nodeId);
   }

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CelebrationProgressChip } from "@/components/discovery/CelebrationProgressChip";
 import { NextMeaningfulExperienceCard } from "@/components/family/NextMeaningfulExperienceCard";
 import {
   MagicalBackground,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui";
 import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { celebrationFirstName, pickCelebration } from "@/domain/celebration/messages";
 import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import {
   buildNextMeaningfulExperienceInput,
@@ -22,7 +24,7 @@ const nextEngine = new NextMeaningfulExperienceEngine();
 
 /**
  * Shown after a Learning Card is completed when an Adventure unlocks.
- * Family AI answers the next meaningful experience with reasons.
+ * Celebrates the child by name — then Family AI answers what's next.
  */
 export default function AdventureUnlockScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,6 +41,27 @@ export default function AdventureUnlockScreen() {
 
   const unlock = memory?.learningCard?.unlockCandidate;
   const discoveryName = memory?.objectName ?? "discovery";
+  const firstName = celebrationFirstName(profile.childName);
+
+  const celebration = useMemo(
+    () =>
+      pickCelebration({
+        childName: profile.childName,
+        discoveryName,
+        context: "unlock",
+        seed: `${memory?.id ?? discoveryName}:unlock:${unlock?.title ?? ""}`,
+        explorerLevel: profile.currentLevel,
+        discoveryCount: memories.length,
+      }),
+    [
+      discoveryName,
+      memories.length,
+      memory?.id,
+      profile.childName,
+      profile.currentLevel,
+      unlock?.title,
+    ],
+  );
 
   const nextMeaningful = useMemo(
     () =>
@@ -77,16 +100,26 @@ export default function AdventureUnlockScreen() {
         ]}
       >
         <SparkleRow count={6} />
-        <Text style={styles.party}>🎉</Text>
-        <Text style={styles.eyebrow}>Adventure Unlocked!</Text>
+        <Text style={styles.party}>{celebration.emoji}</Text>
+        <Text style={styles.eyebrow}>{celebration.headline}</Text>
         <View style={styles.emojiRing}>
           <Text style={styles.emoji}>{unlock?.emoji ?? "✨"}</Text>
         </View>
         <Text style={styles.title}>{unlock?.title ?? "New Adventure"}</Text>
         <Text style={styles.body}>
+          {celebration.subline}{" "}
           {unlock?.subtitle ??
-            "Keep discovering in the real world to grow this adventure."}
+            `${firstName}, keep discovering in the real world to grow this adventure.`}
         </Text>
+
+        <CelebrationProgressChip
+          progress={celebration.progress}
+          secondary={{
+            kind: "explorer_level",
+            emoji: "⭐",
+            label: `Explorer Level ${profile.currentLevel}`,
+          }}
+        />
 
         <NextMeaningfulExperienceCard experience={nextMeaningful} />
 
@@ -147,9 +180,10 @@ const styles = StyleSheet.create({
   party: { fontSize: 40 },
   eyebrow: {
     fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    letterSpacing: 0.4,
+    fontSize: 18,
+    letterSpacing: 0.2,
     color: colors.lavenderInk,
+    textAlign: "center",
   },
   emojiRing: {
     width: 110,

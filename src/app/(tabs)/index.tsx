@@ -36,6 +36,7 @@ import { SoftCard } from "@/components/ui/SoftCard";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { LibraryEntry } from "@/domain/library/types";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 import { useLearningMode } from "@/hooks/useLearningMode";
 
 /**
@@ -57,6 +58,7 @@ export default function DiscoverScreen() {
     clearSavedToast,
   } = useApp();
   const { definition: learningMode } = useLearningMode();
+  const { profile: familyProfile } = useFamilyAIProfile();
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facing, setFacing] = useState<CameraType>("back");
@@ -387,6 +389,7 @@ export default function DiscoverScreen() {
       {savedToast ? (
         <SavedToast
           message={savedToast.message}
+          childName={familyProfile.childName}
           onDone={clearSavedToast}
         />
       ) : null}

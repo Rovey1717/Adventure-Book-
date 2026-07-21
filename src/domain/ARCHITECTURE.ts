@@ -36,15 +36,30 @@
  * Adventure unlock flow:
  *   Celebrate → Unlock → age-appropriate discovery activity → Adventure Card
  *
+ * CELEBRATIONS (personalized, rotating)
+ * Every celebration celebrates the child — not just the completed lesson.
+ * Use the child's first name whenever appropriate. Rotate a large library of
+ * encouraging, curiosity-first messages (never school-grade tone).
+ * Every celebration surfaces meaningful progress (Explorer XP, Level, Badge,
+ * Adventure / Collection / Learning Journey progress, Memory Added).
+ * Domain: `src/domain/celebration/messages.ts` · UI: CelebrationBurst,
+ * celebrate / adventure-unlock screens, lesson celebrate phases, SavedToast.
+ *
  * Learning Graph lessons carry:
  *   min/max age · difficulty · category · objectives · required knowledge ·
  *   related world nodes · duration · languages supported
  *
- * LIVING DISCOVERY CARD (v1 shipped)
- * Discovery Cards query the Memory Graph for a lifelong timeline.
- * On every real-world save, GraphEngine.recordDiscovery() appends a Memory entry.
- * UI: DiscoveryMemoryStatsBar (top) + MemoryTimeline (below Learn).
- * FamilyAI.discoveryMemoryTimeline() builds the view model — card stores nothing.
+ * LIVING DISCOVERY CARD (lifelong Learning Journey home)
+ * Every Discovery Card is a structured course that never ends — not a fact sheet.
+ * Primary sections (Learning Journey is the focus):
+ *   ❤️ My Journey · 📖 Learning Journey · 🗺 Adventures ·
+ *   🏆 Collections · 🌱 What's Next (Family AI, never random)
+ * Learning Journey: reusable sequential path (lessons · quizzes · seek · draw ·
+ * mastery · age-gated future lessons). No per-discovery custom path code.
+ * Adventure Journey: parallel real-world unlock chain per discovery.
+ * Domain: `src/domain/discovery-card/` · UI: DiscoveryCard*Section components.
+ * Memory Timeline queries the Memory Graph — the card stores no memory data.
+ * Family AI always recommends nextLearningJourneyLesson() — never random.
  *
  * Persistence: InMemoryGraphRepository (MVP) → Firebase/remote later
  * without changing engines.

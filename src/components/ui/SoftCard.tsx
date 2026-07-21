@@ -8,7 +8,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
-  FadeInDown,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -92,7 +92,7 @@ export function SoftCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(enterDelay).duration(360).springify()}
+      entering={FadeIn.delay(enterDelay).duration(280)}
       style={[styles.card, shadows.float, floatStyle, style]}
     >
       <LinearGradient colors={[...TINTS[tint]]} style={styles.fill}>

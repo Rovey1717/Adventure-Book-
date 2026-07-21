@@ -113,7 +113,7 @@ export const shadows = {
   },
 };
 
-/** Encouraging copy for reward moments */
+/** Encouraging copy — prefer `@/domain/celebration/messages` for personalized praise. */
 export const praise = [
   "Awesome!",
   "Great Job!",
@@ -122,6 +122,7 @@ export const praise = [
   "Fantastic!",
 ] as const;
 
+/** @deprecated Use pickCelebration / pickCelebrationCheer from domain/celebration/messages */
 export function randomPraise(): string {
   return praise[Math.floor(Math.random() * praise.length)]!;
 }

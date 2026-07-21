@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -9,20 +9,25 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PlayfulPressable } from "@/components/ui";
+import { MagicalBackground, PlayfulPressable, SoftCard } from "@/components/ui";
 import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { buildAdventureEntry } from "@/domain/adventure-book/adventureEntry";
 import type { Memory } from "@/domain/memory/types";
+import { CO_EXPLORER_OPTIONS } from "@/domain/onboarding/types";
 import { accentForCategory } from "@/domain/shared/categories";
+import { useFamilyAIProfile } from "@/hooks/useFamilyAIProfile";
 
 /**
- * Adventure Book memory entry — opens the same Learning Card as Celebrate Now.
+ * Adventure Entry page — a collectible storybook chapter for one memory.
  */
 export default function MemoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { getMemory, toggleFavorite, openLearningFromBook } = useApp();
+  const { getMemory, memories, toggleFavorite, openLearningFromBook } =
+    useApp();
+  const { profile } = useFamilyAIProfile();
   const [memory, setMemory] = useState<Memory | null>(null);
 
   const load = useCallback(async () => {
@@ -34,203 +39,324 @@ export default function MemoryDetailScreen() {
     void load();
   }, [load]);
 
-  if (!memory) {
+  const coExplorerLabel = useMemo(() => {
+    if (profile.coExplorers.length === 0) return "family";
     return (
-      <View style={styles.loading}>
-        <Text style={styles.meta}>Loading memory…</Text>
-      </View>
+      profile.coExplorers
+        .map(
+          (role) =>
+            CO_EXPLORER_OPTIONS.find((option) => option.id === role)?.label ??
+            role,
+        )
+        .join(" & ") || "family"
+    );
+  }, [profile.coExplorers]);
+
+  const entry = useMemo(() => {
+    if (!memory) return null;
+    return buildAdventureEntry(memory, {
+      childName: profile.childName,
+      childAge: profile.currentAge,
+      coExplorerLabel,
+      allMemories: memories.length > 0 ? memories : [memory],
+    });
+  }, [memory, memories, profile.childName, profile.currentAge, coExplorerLabel]);
+
+  if (!memory || !entry) {
+    return (
+      <MagicalBackground variant="cream">
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>Opening this adventure…</Text>
+        </View>
+      </MagicalBackground>
     );
   }
 
   const accent = accentForCategory(memory.category);
   const showPhoto =
     !!memory.photoUri && !memory.photoUri.startsWith("mock-");
-  const statusLabel =
-    memory.learningViewStatus === "completed"
-      ? "Learning completed"
-      : memory.learningViewStatus === "viewed"
-        ? "Learning started"
-        : "Ready to celebrate";
 
   return (
-    <ScrollView
-      style={styles.root}
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={{
-        paddingBottom: insets.bottom + 32,
-        flexGrow: 1,
-      }}
-    >
-      <View style={[styles.hero, { paddingTop: insets.top + 12 }]}>
-        <LinearGradient
-          colors={[accent, colors.cream]}
-          style={StyleSheet.absoluteFill}
-        />
-        <PlayfulPressable onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
-        </PlayfulPressable>
-        {showPhoto ? (
-          <Image source={{ uri: memory.photoUri! }} style={styles.heroPhoto} />
-        ) : (
-          <View style={styles.heroGlyphWrap}>
-            <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+    <MagicalBackground variant="cream" decorated={false}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 36,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.hero, { paddingTop: insets.top + 10 }]}>
+          <LinearGradient
+            colors={[accent, colors.cream]}
+            style={StyleSheet.absoluteFill}
+          />
+          <PlayfulPressable onPress={() => router.back()} style={styles.back}>
+            <Text style={styles.backText}>← Back to book</Text>
+          </PlayfulPressable>
+
+          {showPhoto ? (
+            <Image source={{ uri: memory.photoUri! }} style={styles.heroPhoto} />
+          ) : (
+            <View style={[styles.heroGlyphWrap, { backgroundColor: accent }]}>
+              <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+            </View>
+          )}
+
+          <View style={styles.badgeRow}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>🔎 {entry.discoveryBadge}</Text>
+            </View>
+            {entry.adventureBadge ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>🗺 {entry.adventureBadge}</Text>
+              </View>
+            ) : null}
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                ⭐ Explorer Level {entry.explorerLevel}
+              </Text>
+            </View>
+            {entry.childAge != null ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Age {entry.childAge}</Text>
+              </View>
+            ) : null}
           </View>
-        )}
-        <Text style={styles.heroTitle}>{memory.objectName}</Text>
-        <View style={styles.heroMetaPill}>
-          <Text style={styles.heroMeta}>{statusLabel}</Text>
+
+          <Text style={styles.storyTitle}>{entry.storyTitle}</Text>
+          <Text style={styles.dateLine}>
+            {entry.dateLabel}
+            {entry.locationLabel ? ` · ${entry.locationLabel}` : ""}
+          </Text>
         </View>
-      </View>
 
-      <View style={styles.body}>
-        <Text style={styles.meta}>
-          Found {new Date(memory.discoveredAt).toLocaleDateString()}
-          {memory.locationLabel ? ` · ${memory.locationLabel}` : ""}
-        </Text>
-        <Text style={styles.meta}>
-          Discovered {memory.discoveryCount} time
-          {memory.discoveryCount === 1 ? "" : "s"}
-        </Text>
+        <View style={styles.body}>
+          <SoftCard tint="yellow" shimmer>
+            <View style={styles.block}>
+              <Text style={styles.blockEyebrow}>📖 Family AI story</Text>
+              <Text style={styles.storyBody}>{entry.storyBody}</Text>
+            </View>
+          </SoftCard>
 
-        <PlayfulPressable
-          style={styles.primary}
-          onPress={() => {
-            router.push(openLearningFromBook(memory.id));
-          }}
-        >
-          <Text style={styles.primaryText}>
-            {memory.learningViewStatus === "never_viewed"
-              ? "🎉 Celebrate & Learn"
-              : "Open Learning Card"}
-          </Text>
-        </PlayfulPressable>
+          <SoftCard tint="coral">
+            <View style={styles.block}>
+              <Text style={styles.blockEyebrow}>💛 Family moment</Text>
+              <Text style={styles.blockBody}>{entry.familyMoment}</Text>
+            </View>
+          </SoftCard>
 
-        <PlayfulPressable
-          style={styles.favorite}
-          onPress={() => {
-            void (async () => {
-              await toggleFavorite(memory.id);
-              await load();
-            })();
-          }}
-        >
-          <Text style={styles.favoriteText}>
-            {memory.isFavorite ? "♥ Favorited" : "♡ Add to Favorites"}
-          </Text>
-        </PlayfulPressable>
+          <SoftCard tint="blue">
+            <View style={styles.block}>
+              <Text style={styles.blockEyebrow}>📚 Things learned</Text>
+              {entry.thingsLearned.map((item) => (
+                <Text key={item} style={styles.bullet}>
+                  · {item}
+                </Text>
+              ))}
+            </View>
+          </SoftCard>
 
-        <Text style={styles.section}>Saved status</Text>
-        <Text style={styles.meta}>✓ Forever in Adventure Book</Text>
-      </View>
-    </ScrollView>
+          <SoftCard tint="green">
+            <View style={styles.block}>
+              <Text style={styles.blockEyebrow}>🌱 Curiosity seeds planted</Text>
+              <Text style={styles.blockBody}>
+                Future journeys waiting to bloom:
+              </Text>
+              {entry.curiositySeeds.map((seed) => (
+                <Text key={seed} style={styles.bullet}>
+                  · {seed}
+                </Text>
+              ))}
+            </View>
+          </SoftCard>
+
+          {entry.collectionTitle ? (
+            <SoftCard tint="lavender">
+              <View style={styles.block}>
+                <Text style={styles.blockEyebrow}>🏆 Collection</Text>
+                <Text style={styles.blockBody}>
+                  {entry.collectionTitle}
+                  {entry.collectionProgressLabel
+                    ? ` · ${entry.collectionProgressLabel}`
+                    : ""}
+                </Text>
+              </View>
+            </SoftCard>
+          ) : null}
+
+          {entry.celebrations.length > 0 ? (
+            <SoftCard tint="aqua">
+              <View style={styles.block}>
+                <Text style={styles.blockEyebrow}>✨ Celebrations</Text>
+                {entry.celebrations.map((item) => (
+                  <Text key={item} style={styles.bullet}>
+                    {item}
+                  </Text>
+                ))}
+              </View>
+            </SoftCard>
+          ) : null}
+
+          <PlayfulPressable
+            style={styles.primary}
+            onPress={() => router.push(openLearningFromBook(memory.id))}
+          >
+            <Text style={styles.primaryText}>
+              {memory.learningViewStatus === "never_viewed"
+                ? "🎉 Celebrate & continue learning"
+                : "Open this discovery’s Learning Journey"}
+            </Text>
+          </PlayfulPressable>
+
+          <PlayfulPressable
+            style={styles.favorite}
+            onPress={() => {
+              void (async () => {
+                await toggleFavorite(memory.id);
+                await load();
+              })();
+            }}
+          >
+            <Text style={styles.favoriteText}>
+              {memory.isFavorite
+                ? "♥ Kept as a treasured page"
+                : "♡ Mark as treasured"}
+            </Text>
+          </PlayfulPressable>
+        </View>
+      </ScrollView>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  loadingText: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    color: colors.inkMuted,
+  },
   hero: {
     paddingHorizontal: space.screen,
-    paddingBottom: 32,
-    gap: 8,
+    paddingBottom: 28,
+    gap: 10,
     borderBottomLeftRadius: radii.xxl,
     borderBottomRightRadius: radii.xxl,
     overflow: "hidden",
   },
-  heroPhoto: {
-    width: "100%",
-    height: 220,
-    borderRadius: radii.xxl,
-    marginTop: 8,
-  },
   back: {
     alignSelf: "flex-start",
     paddingVertical: 8,
-    paddingHorizontal: 4,
   },
   backText: {
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: colors.navy,
   },
+  heroPhoto: {
+    width: "100%",
+    height: 240,
+    borderRadius: radii.xxl,
+    borderWidth: 4,
+    borderColor: "rgba(255,255,255,0.7)",
+  },
   heroGlyphWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
     alignSelf: "center",
+    marginTop: 8,
   },
   heroGlyph: {
     fontFamily: fonts.display,
-    fontSize: 48,
-    color: colors.navy,
+    fontSize: 56,
+    color: colors.cameraInk,
   },
-  heroTitle: {
-    fontFamily: fonts.display,
-    fontSize: 36,
-    color: colors.navy,
-    textAlign: "center",
-  },
-  heroMetaPill: {
-    alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  heroMeta: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 14,
-    color: colors.navySoft,
-  },
-  body: {
-    padding: space.screen,
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
-  meta: {
+  badge: {
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  badgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.navy,
+  },
+  storyTitle: {
+    fontFamily: fonts.display,
+    fontSize: 30,
+    lineHeight: 36,
+    color: colors.navy,
+  },
+  dateLine: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 14,
+    color: colors.inkMuted,
+  },
+  body: {
+    paddingHorizontal: space.screen,
+    paddingTop: 18,
+    gap: 14,
+  },
+  block: {
+    padding: 18,
+    gap: 8,
+  },
+  blockEyebrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.inkSoft,
+  },
+  storyBody: {
+    fontFamily: fonts.body,
+    fontSize: 17,
+    lineHeight: 26,
+    color: colors.navy,
+  },
+  blockBody: {
     fontFamily: fonts.body,
     fontSize: 15,
+    lineHeight: 23,
     color: colors.inkMuted,
-    lineHeight: 22,
+  },
+  bullet: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 15,
+    lineHeight: 23,
+    color: colors.navy,
   },
   primary: {
     backgroundColor: colors.coral,
     borderRadius: radii.pill,
-    paddingVertical: 17,
+    paddingVertical: 16,
     alignItems: "center",
-    marginTop: 12,
   },
   primaryText: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 17,
-    color: colors.surfaceRaised,
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.cameraInk,
   },
   favorite: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.pastelPink,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
     borderRadius: radii.pill,
-    marginVertical: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: colors.pastelPink,
   },
   favoriteText: {
     fontFamily: fonts.bodyBold,
-    color: colors.coralDeep,
-  },
-  section: {
-    fontFamily: fonts.displaySemi,
-    fontSize: 18,
-    color: colors.ink,
-    marginTop: 16,
+    fontSize: 15,
+    color: colors.navy,
   },
 });

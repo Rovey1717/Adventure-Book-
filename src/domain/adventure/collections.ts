@@ -20,6 +20,13 @@ export const ADVENTURE_COLLECTIONS: AdventureCollectionDef[] = [
     ],
   },
   {
+    id: "emergency_vehicles",
+    title: "Emergency Vehicles",
+    emoji: "🚨",
+    subtitle: "Machines that race to help",
+    discoveryNames: ["Fire Truck", "Ambulance", "Police Car"],
+  },
+  {
     id: "pollinators",
     title: "Pollinators",
     emoji: "🐝",
@@ -28,10 +35,31 @@ export const ADVENTURE_COLLECTIONS: AdventureCollectionDef[] = [
   },
   {
     id: "construction",
-    title: "Construction Site",
+    title: "Construction Vehicles",
     emoji: "🚧",
     subtitle: "Machines that build our world",
     discoveryNames: ["Excavator", "Crane", "Dump Truck", "Bulldozer"],
+  },
+  {
+    id: "farm_animals",
+    title: "Farm Animals",
+    emoji: "🐄",
+    subtitle: "Friends who live on the farm",
+    discoveryNames: ["Cow", "Chicken", "Pig", "Horse", "Duck"],
+  },
+  {
+    id: "ocean_life",
+    title: "Ocean Life",
+    emoji: "🌊",
+    subtitle: "Creatures and wonders of the sea",
+    discoveryNames: ["Fish", "Shell", "Crab", "Whale", "Starfish"],
+  },
+  {
+    id: "trees",
+    title: "Trees",
+    emoji: "🌳",
+    subtitle: "Living giants that grow with us",
+    discoveryNames: ["Tree", "Oak", "Pine", "Maple", "Leaf"],
   },
 ];
 

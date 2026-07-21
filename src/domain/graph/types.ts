@@ -55,8 +55,18 @@ export type ChildNodeProgress = {
   watchedVideo: boolean;
   completedQuiz: boolean;
   completedAdventure: boolean;
+  /**
+   * Interactive Learning Journey lesson ids completed via LessonPlayer.
+   * Keys match LearningJourneyStepId.
+   */
+  completedLessonSteps: string[];
   /** 0–100 */
   masteryScore: number;
+};
+
+/** Child-wide explorer progression (across all discoveries). */
+export type ChildExplorerState = {
+  totalXp: number;
 };
 
 export type ChildProfile = {
