@@ -4,6 +4,10 @@ import type { Discovery } from "@/domain/discovery/types";
 import type { JourneySnapshot } from "@/domain/journey/types";
 import type { Memory } from "@/domain/memory/types";
 import type { MemoryCategory } from "@/domain/shared/categories";
+import {
+  DEMO_INTELLIGENCE_CHILD_ID,
+  getIntelligenceLayer,
+} from "@/intelligence/createIntelligenceLayer";
 import type { AdventureService } from "@/services/AdventureService";
 import type { DiscoveryService } from "@/services/DiscoveryService";
 import type { JourneyService } from "@/services/JourneyService";
@@ -31,6 +35,8 @@ export type NamedDiscoveryLabel = {
  * Capture flow (only path that creates progress):
  *   capture → name → Memory (saved immediately) → Learning Adventure (background)
  *   → Decision: Celebrate Now | Continue Exploring
+ *
+ * Also writes a Memory Graph entry so Living Discovery Cards grow a lifelong timeline.
  *
  * Search / Library is a separate knowledge path and must never call this service
  * for memories, adventures, or journey updates.
@@ -112,6 +118,9 @@ export class DiscoveryJourneyService {
     await this.memories.setAdventuresCompleted(memory.id, completedCount);
     const journey = await this.journey.getSnapshot();
 
+    // Living Discovery Card: always append a Memory Graph entry (never overwrite).
+    await this.appendMemoryGraphEntry(discovery);
+
     const discoveryPoints = 50 + adventures.length * 5;
     const badgeTitle =
       journey.badges.length > 0
@@ -126,5 +135,28 @@ export class DiscoveryJourneyService {
       discoveryPoints,
       badgeTitle,
     };
+  }
+
+  private async appendMemoryGraphEntry(discovery: Discovery): Promise<void> {
+    try {
+      const { graph } = await getIntelligenceLayer();
+      await graph.recordDiscovery({
+        childId: DEMO_INTELLIGENCE_CHILD_ID,
+        discoveryLabel: discovery.objectName,
+        mediaType: discovery.mediaType,
+        mediaUri: discovery.mediaUri,
+        location: discovery.location
+          ? {
+              latitude: discovery.location.latitude,
+              longitude: discovery.location.longitude,
+            }
+          : null,
+        locationLabel: discovery.locationLabel,
+        timestamp: discovery.createdAt,
+        notes: null,
+      });
+    } catch {
+      // Legacy Adventure Book save still succeeds if intelligence layer fails.
+    }
   }
 }

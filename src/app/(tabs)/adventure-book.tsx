@@ -1,16 +1,14 @@
 import { useCallback, useMemo } from "react";
-import {
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import {
+  MagicalBackground,
+  PhotoFrame,
+  PlayfulPressable,
+  SoftCard,
+} from "@/components/ui";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { accentForCategory } from "@/domain/shared/categories";
 import type { Memory } from "@/domain/memory/types";
@@ -23,54 +21,95 @@ function formatDate(iso: string) {
   });
 }
 
+const STATUS_META: Record<
+  Memory["learningViewStatus"],
+  { label: string; emoji: string; bg: string; fg: string }
+> = {
+  completed: {
+    label: "Learning completed",
+    emoji: "🏆",
+    bg: colors.mossSoft,
+    fg: colors.mossDeep,
+  },
+  viewed: {
+    label: "Learning started",
+    emoji: "📖",
+    bg: colors.pastelBlue,
+    fg: colors.skyBlue,
+  },
+  never_viewed: {
+    label: "Saved · ready to celebrate",
+    emoji: "🎉",
+    bg: colors.pastelYellow,
+    fg: colors.sunshineDeep,
+  },
+};
+
 function MemoryCard({
   memory,
   onPress,
+  index,
 }: {
   memory: Memory;
   onPress: () => void;
+  index: number;
 }) {
   const accent = accentForCategory(memory.category);
-  const showPhoto =
-    !!memory.photoUri && !memory.photoUri.startsWith("mock-");
+  const status =
+    STATUS_META[memory.learningViewStatus] ?? STATUS_META.never_viewed;
 
   return (
-    <Pressable
+    <PlayfulPressable
+      tilt
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open memory of ${memory.objectName}`}
     >
-      {showPhoto ? (
-        <Image source={{ uri: memory.photoUri! }} style={styles.photo} />
-      ) : (
-        <View style={[styles.photo, { backgroundColor: accent }]}>
-          <Text style={styles.photoGlyph}>{memory.objectName.charAt(0)}</Text>
+      <SoftCard
+        tint="white"
+        enterDelay={Math.min(index * 70, 420)}
+        style={styles.card}
+      >
+        <PhotoFrame
+          uri={memory.photoUri}
+          borderColor={accent}
+          height={170}
+          style={styles.photoFrame}
+        >
+          <View style={[styles.photoFallback, { backgroundColor: accent }]}>
+            <Text style={styles.photoGlyph}>
+              {memory.objectName.charAt(0)}
+            </Text>
+          </View>
+        </PhotoFrame>
+        <View style={styles.copy}>
+          <Text style={styles.objectName}>{memory.objectName}</Text>
+          <Text style={styles.meta}>📅 {formatDate(memory.discoveredAt)}</Text>
+          {memory.locationLabel ? (
+            <Text style={styles.meta}>📍 {memory.locationLabel}</Text>
+          ) : null}
+
+          <View style={styles.pillRow}>
+            <View
+              style={[styles.statusPill, { backgroundColor: status.bg }]}
+            >
+              <Text style={[styles.statusPillText, { color: status.fg }]}>
+                {status.emoji} {status.label}
+              </Text>
+            </View>
+            {memory.isFavorite ? (
+              <View style={styles.favoritePill}>
+                <Text style={styles.favoritePillText}>★ Favorite</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={styles.notes}>
+            {memory.notes?.trim() ? memory.notes : "Notes · coming soon"}
+          </Text>
         </View>
-      )}
-      <View style={styles.copy}>
-        <Text style={styles.objectName}>{memory.objectName}</Text>
-        <Text style={styles.meta}>{formatDate(memory.discoveredAt)}</Text>
-        {memory.locationLabel ? (
-          <Text style={styles.meta}>{memory.locationLabel}</Text>
-        ) : null}
-        <Text style={styles.stats}>
-          {memory.learningViewStatus === "completed"
-            ? "Learning completed"
-            : memory.learningViewStatus === "viewed"
-              ? "Learning started"
-              : "Saved · ready to celebrate"}
-        </Text>
-        <View style={styles.flags}>
-          {memory.isFavorite ? (
-            <Text style={styles.flagFavorite}>★ Favorite</Text>
-          ) : (
-            <Text style={styles.flagMuted}>Favorite</Text>
-          )}
-        </View>
-        <Text style={styles.notes}>
-          {memory.notes?.trim() ? memory.notes : "Notes · coming soon"}
-        </Text>
-      </View>
-    </Pressable>
+      </SoftCard>
+    </PlayfulPressable>
   );
 }
 
@@ -92,47 +131,52 @@ export default function AdventureBookScreen() {
   const data = useMemo(() => memories, [memories]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
-      <LinearGradient
-        colors={[colors.skyBottom, colors.surface]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.header}>
-        <Text style={styles.heading}>Adventure Book</Text>
-        <Text style={styles.subheading}>
-          Every real-world discovery — celebrate now or come back anytime
-        </Text>
-      </View>
-
-      {data.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No memories yet</Text>
-          <Text style={styles.emptyBody}>
-            Take a picture in Discover. It saves here immediately — even if you
-            keep exploring.
+    <MagicalBackground variant="cream">
+      <View style={[styles.content, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.header}>
+          <Text style={styles.heading}>📖 Adventure Book</Text>
+          <Text style={styles.subheading}>
+            Every real-world discovery — celebrate now or come back anytime
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <MemoryCard
-              memory={item}
-              onPress={() => router.push(`/memory/${item.id}`)}
-            />
-          )}
-        />
-      )}
-    </View>
+
+        {data.length === 0 ? (
+          <View style={styles.empty}>
+            <SoftCard tint="yellow" float style={styles.emptyCard}>
+              <Text style={styles.emptyEmoji}>📸✨</Text>
+              <Text style={styles.emptyTitle}>No memories yet!</Text>
+              <Text style={styles.emptyBody}>
+                Take a picture in Discover. It saves here immediately — even if
+                you keep exploring.
+              </Text>
+            </SoftCard>
+          </View>
+        ) : (
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item.id}
+            contentInsetAdjustmentBehavior="never"
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: insets.bottom + 40 },
+            ]}
+            renderItem={({ item, index }) => (
+              <MemoryCard
+                memory={item}
+                index={index}
+                onPress={() => router.push(`/memory/${item.id}`)}
+              />
+            )}
+          />
+        )}
+      </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  content: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
   header: {
     paddingHorizontal: space.screen,
@@ -152,94 +196,96 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: space.screen,
-    paddingBottom: 40,
-    gap: 14,
+    gap: 18,
   },
   card: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 22,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.stroke,
+    padding: 14,
+    gap: 0,
   },
-  pressed: {
-    opacity: 0.92,
+  photoFrame: {
+    marginBottom: 4,
   },
-  photo: {
-    height: 160,
+  photoFallback: {
+    flex: 1,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
   photoGlyph: {
     fontFamily: fonts.display,
-    fontSize: 56,
+    fontSize: 60,
     color: "rgba(255,255,255,0.92)",
   },
   copy: {
-    padding: 16,
-    gap: 4,
+    paddingTop: 14,
+    paddingHorizontal: 4,
+    gap: 5,
   },
   objectName: {
     fontFamily: fonts.display,
-    fontSize: 24,
+    fontSize: 26,
     color: colors.ink,
   },
   meta: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodySemi,
     fontSize: 14,
     color: colors.inkMuted,
   },
-  stats: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 13,
-    color: colors.moss,
-    marginTop: 6,
-  },
-  flags: {
+  pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 10,
+    marginTop: 8,
   },
-  flagFavorite: {
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+  },
+  statusPillText: {
     fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    color: colors.orangeDeep,
-    backgroundColor: colors.orangeSoft,
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    fontSize: 13,
   },
-  flagMuted: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.inkSoft,
-    paddingHorizontal: 4,
-    paddingVertical: 5,
+  favoritePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.orangeSoft,
+  },
+  favoritePillText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.orangeDeep,
   },
   notes: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.inkSoft,
-    marginTop: 8,
+    marginTop: 10,
     fontStyle: "italic",
   },
   empty: {
-    paddingHorizontal: 32,
-    paddingTop: 48,
+    paddingHorizontal: space.screen,
+    paddingTop: 24,
+  },
+  emptyCard: {
     alignItems: "center",
+    padding: 32,
     gap: 8,
+  },
+  emptyEmoji: {
+    fontSize: 56,
+    marginBottom: 6,
   },
   emptyTitle: {
     fontFamily: fonts.displaySemi,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.ink,
   },
   emptyBody: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 23,
     color: colors.inkMuted,
     textAlign: "center",
   },

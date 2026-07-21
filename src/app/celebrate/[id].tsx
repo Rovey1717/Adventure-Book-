@@ -1,9 +1,15 @@
 import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, radii, space } from "@/constants/theme";
+import {
+  MagicalBackground,
+  PlayfulPressable,
+  PulseGlow,
+  SoftCard,
+  SparkleRow,
+} from "@/components/ui";
+import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 /**
@@ -25,11 +31,7 @@ export default function DiscoverySavedScreen() {
   const name = memory?.objectName ?? "Discovery";
 
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.skyTop, "#FFE7B8", colors.skyBottom]}
-        style={StyleSheet.absoluteFill}
-      />
+    <MagicalBackground variant="celebration">
       <View
         style={[
           styles.content,
@@ -39,8 +41,13 @@ export default function DiscoverySavedScreen() {
           },
         ]}
       >
-        <Text style={styles.badge}>✓ Saved to Adventure Book</Text>
-        <Text style={styles.eyebrow}>Great Discovery!</Text>
+        <SparkleRow count={5} />
+
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>✓ Saved to Adventure Book</Text>
+        </View>
+
+        <Text style={styles.eyebrow}>Amazing Discovery!</Text>
         <Text style={styles.title}>You found a {name}!</Text>
         <Text style={styles.body}>
           Your discovery has been saved. Would you like to celebrate it now or
@@ -51,22 +58,29 @@ export default function DiscoverySavedScreen() {
           Book.
         </Text>
 
-        <Pressable
-          style={styles.primary}
-          onPress={() => {
-            if (!memory?.id) return;
-            // Push (not replace) so the stack stays coherent; Learning Card
-            // Back goes to Discover via replace("/(tabs)").
-            router.push({
-              pathname: "/learning/[id]",
-              params: { id: memory.id, celebrate: "1" },
-            });
-          }}
-        >
-          <Text style={styles.primaryText}>🎉 Celebrate Now</Text>
-        </Pressable>
+        <SoftCard tint="yellow" float style={styles.heroCard}>
+          <View style={styles.heroInner}>
+            <Text style={styles.heroEmoji}>🌟</Text>
+            <Text style={styles.heroLabel}>Ready to celebrate?</Text>
+          </View>
+        </SoftCard>
 
-        <Pressable
+        <PulseGlow color={colors.coral}>
+          <PlayfulPressable
+            style={styles.primary}
+            onPress={() => {
+              if (!memory?.id) return;
+              router.push({
+                pathname: "/learning/[id]",
+                params: { id: memory.id, celebrate: "1" },
+              });
+            }}
+          >
+            <Text style={styles.primaryText}>🎉 Celebrate Now</Text>
+          </PlayfulPressable>
+        </PulseGlow>
+
+        <PlayfulPressable
           style={styles.secondary}
           onPress={() => {
             if (!memory) {
@@ -78,14 +92,13 @@ export default function DiscoverySavedScreen() {
           }}
         >
           <Text style={styles.secondaryText}>Continue Exploring</Text>
-        </Pressable>
+        </PlayfulPressable>
       </View>
-    </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: space.lg,
@@ -94,22 +107,25 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: "flex-start",
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.mossDeep,
     backgroundColor: colors.pastelGreen,
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: radii.pill,
     marginBottom: 4,
+    minHeight: 40,
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.grass,
+  },
+  badgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.grassDeep,
   },
   eyebrow: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 14,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: colors.moss,
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.coralDeep,
   },
   title: {
     fontFamily: fonts.display,
@@ -129,29 +145,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: colors.inkSoft,
-    marginBottom: 10,
+    marginBottom: 6,
+  },
+  heroCard: {
+    marginVertical: 8,
+  },
+  heroInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    gap: 6,
+  },
+  heroEmoji: {
+    fontSize: 40,
+  },
+  heroLabel: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 18,
+    color: colors.navy,
   },
   primary: {
-    backgroundColor: colors.orange,
-    borderRadius: 18,
-    paddingVertical: 16,
+    backgroundColor: colors.coral,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     alignItems: "center",
     marginTop: 8,
+    minHeight: 56,
+    justifyContent: "center",
+    ...shadows.float,
   },
   primaryText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.surfaceRaised,
   },
   secondary: {
-    backgroundColor: colors.mossSoft,
-    borderRadius: 18,
-    paddingVertical: 16,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     alignItems: "center",
+    minHeight: 56,
+    justifyContent: "center",
+    borderWidth: 2.5,
+    borderColor: colors.skyBlue,
   },
   secondaryText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 17,
-    color: colors.mossDeep,
+    fontSize: 18,
+    color: colors.skyBlue,
   },
 });

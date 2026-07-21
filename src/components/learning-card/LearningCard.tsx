@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import type { LearningModule } from "@/domain/learning/card";
 import { LearningModuleView } from "@/components/learning-card/LearningModuleView";
+import { MagicalBackground } from "@/components/ui";
 import { space } from "@/constants/theme";
 
 type Props = {
@@ -24,33 +25,40 @@ export function LearningCard({
   contentPaddingBottom = 28,
 }: Props) {
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: contentPaddingTop,
-          paddingBottom: contentPaddingBottom,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {header}
-      <View style={styles.modules}>
-        {modules.map((module, index) => (
-          <LearningModuleView
-            key={`${module.type}-${index}`}
-            module={module}
-          />
-        ))}
-      </View>
-      {footer}
-    </ScrollView>
+    <MagicalBackground variant="cream" style={styles.root}>
+      <ScrollView
+        style={styles.scroll}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: contentPaddingTop,
+            paddingBottom: contentPaddingBottom,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {header}
+        <View style={styles.modules}>
+          {modules.map((module, index) => (
+            <LearningModuleView
+              key={`${module.type}-${index}`}
+              module={module}
+              index={index}
+            />
+          ))}
+        </View>
+        {footer}
+      </ScrollView>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
+  },
+  scroll: {
     flex: 1,
   },
   content: {

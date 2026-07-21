@@ -1,5 +1,12 @@
+import {
+  LEARNING_LEVELS,
+  learningLevelForAge,
+  type LearningLevel,
+} from "@/intelligence/types/progression";
+
 export type LearningStage = {
   age: number;
+  level: LearningLevel;
   mode: string;
   title: string;
   description: string;
@@ -8,45 +15,61 @@ export type LearningStage = {
   glyph: string;
 };
 
-/** Age progression copy — Library-agnostic; personalized by object + child name in UI. */
+const STAGE_STYLE: Record<
+  LearningLevel,
+  { accent: string; soft: string; glyph: string }
+> = {
+  1: { accent: "#E45A5A", soft: "#FDE4E4", glyph: "●" },
+  2: { accent: "#F08A24", soft: "#FFE8D1", glyph: "?" },
+  3: { accent: "#3D6FBF", soft: "#D9E6FA", glyph: "✦" },
+  4: { accent: "#6B4FA0", soft: "#EDE4F8", glyph: "◎" },
+  5: { accent: "#2F6B4F", soft: "#D8F0E4", glyph: "◈" },
+};
+
+/**
+ * Age progression copy — discovery-tied; never random subject matter.
+ * Levels align with Learning Progression Engine (1–5).
+ */
 export function learningStagesForObject(objectName: string): LearningStage[] {
   const lower = objectName.toLowerCase();
-  return [
-    {
-      age: 2,
-      mode: "Sensing",
-      title: `Colors, sounds, "${objectName}!"`,
-      description: `Naming, pointing, and noticing a ${lower} in the world.`,
-      accent: "#E45A5A",
-      soft: "#FDE4E4",
-      glyph: "●",
-    },
-    {
-      age: 4,
-      mode: "Wondering",
-      title: `Where does a ${lower} belong?`,
-      description: `Questions, vocabulary, and gentle connections to people and places.`,
-      accent: "#F08A24",
-      soft: "#FFE8D1",
-      glyph: "?",
-    },
-    {
-      age: 7,
-      mode: "Reasoning",
-      title: `${objectName} science & stories`,
-      description: `Critical thinking, habitats, and playful problem solving.`,
-      accent: "#3D6FBF",
-      soft: "#D9E6FA",
-      glyph: "✦",
-    },
-    {
-      age: 10,
-      mode: "Exploring",
-      title: `Deeper ${lower} adventures`,
-      description: `Systems thinking, creative projects, and sharing discoveries.`,
-      accent: "#6B4FA0",
-      soft: "#EDE4F8",
-      glyph: "◎",
-    },
-  ];
+  return LEARNING_LEVELS.map((def) => {
+    const style = STAGE_STYLE[def.level];
+    return {
+      age: def.ageMin,
+      level: def.level,
+      mode: def.label,
+      title: stageTitle(objectName, lower, def.level),
+      description: `${def.focus.slice(0, 3).join(", ")} — connected to this ${lower}.`,
+      accent: style.accent,
+      soft: style.soft,
+      glyph: style.glyph,
+    };
+  });
+}
+
+function stageTitle(
+  objectName: string,
+  lower: string,
+  level: LearningLevel,
+): string {
+  switch (level) {
+    case 1:
+      return `Colors, sounds, "${objectName}!"`;
+    case 2:
+      return `Who helps with a ${lower}?`;
+    case 3:
+      return `How does a ${lower} work?`;
+    case 4:
+      return `Investigate the ${lower}`;
+    case 5:
+      return `${objectName} in your community`;
+  }
+}
+
+export function learningStageForAge(
+  objectName: string,
+  age: number,
+): LearningStage {
+  const level = learningLevelForAge(age);
+  return learningStagesForObject(objectName).find((s) => s.level === level)!;
 }

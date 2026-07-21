@@ -1,13 +1,28 @@
 import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, radii, space } from "@/constants/theme";
+import {
+  MagicalBackground,
+  PlayfulPressable,
+  PulseGlow,
+  SoftCard,
+  SparkleRow,
+} from "@/components/ui";
+import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { getDemoLearningProfile } from "@/domain/parent/profile";
+import {
+  learningLevelForAge,
+  definitionForLevel,
+} from "@/intelligence/types/progression";
 
 /**
  * Shown after a Learning Card is completed when an Adventure unlocks.
+ *
+ * Flow: Celebrate → Adventure Unlock → age-appropriate activity
+ * related to that adventure → Adventure Card.
+ * Never jumps to unrelated educational content (e.g. random Spanish).
  */
 export default function AdventureUnlockScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,13 +37,56 @@ export default function AdventureUnlockScreen() {
   );
 
   const unlock = memory?.learningCard?.unlockCandidate;
+  const profile = getDemoLearningProfile();
+  const level = definitionForLevel(learningLevelForAge(profile.age));
+  const discoveryName = memory?.objectName ?? "discovery";
+
+  const nextActivity = useMemo(() => {
+    switch (level.level) {
+      case 1:
+        return {
+          title: `Point & name`,
+          prompt: `What color is the ${discoveryName}? Can you point to it?`,
+        };
+      case 2:
+        return {
+          title: `Community helper`,
+          prompt: `Who uses a ${discoveryName}? Match what helpers need.`,
+        };
+      case 3:
+        return {
+          title: `How it works`,
+          prompt: `Why do we need a ${discoveryName}?`,
+        };
+      case 4:
+        return {
+          title: `Investigate`,
+          prompt: `How does a ${discoveryName} work?`,
+        };
+      case 5:
+        return {
+          title: `Community research`,
+          prompt: `How does your local community use a ${discoveryName}?`,
+        };
+    }
+  }, [discoveryName, level.level]);
+
+  const goToAdventure = async () => {
+    if (memory) await markUnlockSeen(memory.id);
+    const adventures = memory
+      ? await getAdventuresForMemory(memory.id)
+      : [];
+    const preferred =
+      adventures.find((a) => a.kind !== "language") ?? adventures[0];
+    if (preferred) {
+      router.replace(`/adventure/${preferred.id}`);
+    } else {
+      router.replace("/(tabs)/adventures");
+    }
+  };
 
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.pastelPurple, colors.cream, colors.pastelYellow]}
-        style={StyleSheet.absoluteFill}
-      />
+    <MagicalBackground variant="lavender">
       <View
         style={[
           styles.content,
@@ -38,37 +96,44 @@ export default function AdventureUnlockScreen() {
           },
         ]}
       >
+        <SparkleRow count={6} />
         <Text style={styles.party}>🎉</Text>
-        <Text style={styles.eyebrow}>Adventure Unlocked</Text>
-        <Text style={styles.emoji}>{unlock?.emoji ?? "✨"}</Text>
+        <Text style={styles.eyebrow}>Adventure Unlocked!</Text>
+        <View style={styles.emojiRing}>
+          <Text style={styles.emoji}>{unlock?.emoji ?? "✨"}</Text>
+        </View>
         <Text style={styles.title}>{unlock?.title ?? "New Adventure"}</Text>
         <Text style={styles.body}>
           {unlock?.subtitle ??
             "Keep discovering in the real world to grow this adventure."}
         </Text>
 
-        <Pressable
-          style={styles.primary}
-          onPress={() => {
-            void (async () => {
-              if (memory) await markUnlockSeen(memory.id);
-              const adventures = memory
-                ? await getAdventuresForMemory(memory.id)
-                : [];
-              const first = adventures[0];
-              if (first) {
-                router.replace(`/adventure/${first.id}`);
-              } else {
-                router.replace("/(tabs)/adventures");
-              }
-            })();
-          }}
-        >
-          <Text style={styles.primaryText}>Explore Adventure →</Text>
-        </Pressable>
+        <SoftCard tint="lavender" float style={styles.nextCard}>
+          <View style={styles.nextBox}>
+            <Text style={styles.nextEyebrow}>
+              Next for Level {level.level} · {level.label}
+            </Text>
+            <Text style={styles.nextTitle}>{nextActivity.title}</Text>
+            <Text style={styles.nextBody}>{nextActivity.prompt}</Text>
+          </View>
+        </SoftCard>
 
-        <Pressable
+        <PulseGlow color={colors.coral}>
+          <PlayfulPressable style={styles.primary} onPress={() => void goToAdventure()}>
+            <Text style={styles.primaryText}>Start this activity →</Text>
+          </PlayfulPressable>
+        </PulseGlow>
+
+        <PlayfulPressable
           style={styles.secondary}
+          onPress={() => void goToAdventure()}
+        >
+          <Text style={styles.secondaryText}>View Adventure Card</Text>
+        </PlayfulPressable>
+
+        <PlayfulPressable
+          style={styles.tertiary}
+          bounce={false}
           onPress={() => {
             void (async () => {
               if (memory) await markUnlockSeen(memory.id);
@@ -76,15 +141,14 @@ export default function AdventureUnlockScreen() {
             })();
           }}
         >
-          <Text style={styles.secondaryText}>Maybe Later</Text>
-        </Pressable>
+          <Text style={styles.tertiaryText}>Maybe Later</Text>
+        </PlayfulPressable>
       </View>
-    </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: space.lg,
@@ -92,15 +156,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  party: { fontSize: 36 },
+  party: { fontSize: 40 },
   eyebrow: {
     fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    fontSize: 15,
+    letterSpacing: 0.4,
     color: colors.lavenderInk,
   },
-  emoji: { fontSize: 64, marginVertical: 8 },
+  emojiRing: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: colors.pastelYellow,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 6,
+    borderWidth: 4,
+    borderColor: colors.surfaceRaised,
+    ...shadows.float,
+  },
+  emoji: { fontSize: 56 },
   title: {
     fontFamily: fonts.display,
     fontSize: 36,
@@ -114,30 +189,74 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.inkMuted,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  nextCard: {
+    alignSelf: "stretch",
+    marginVertical: 8,
+  },
+  nextBox: {
+    padding: 18,
+    gap: 6,
+  },
+  nextEyebrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: colors.grassDeep,
+  },
+  nextTitle: {
+    fontFamily: fonts.displaySemi,
+    fontSize: 20,
+    color: colors.navy,
+  },
+  nextBody: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.inkMuted,
   },
   primary: {
     alignSelf: "stretch",
-    backgroundColor: colors.orange,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
+    backgroundColor: colors.coral,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     alignItems: "center",
+    minHeight: 56,
+    justifyContent: "center",
+    ...shadows.float,
   },
   primaryText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.surfaceRaised,
   },
   secondary: {
     alignSelf: "stretch",
-    backgroundColor: colors.mossSoft,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     alignItems: "center",
+    minHeight: 56,
+    justifyContent: "center",
+    borderWidth: 2.5,
+    borderColor: colors.lavender,
   },
   secondaryText: {
     fontFamily: fonts.displaySemi,
     fontSize: 17,
-    color: colors.mossDeep,
+    color: colors.lavenderInk,
+  },
+  tertiary: {
+    alignSelf: "stretch",
+    paddingVertical: 14,
+    alignItems: "center",
+    minHeight: 48,
+  },
+  tertiaryText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.inkSoft,
   },
 });

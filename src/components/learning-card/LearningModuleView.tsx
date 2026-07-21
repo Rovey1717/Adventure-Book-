@@ -1,40 +1,47 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import type { ComponentProps, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
 import type { LearningModule } from "@/domain/learning/card";
+import {
+  AnimatedProgressBar,
+  PlayfulPressable,
+  SoftCard,
+} from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 
 type Props = {
   module: LearningModule;
+  index?: number;
 };
 
 /**
  * Renders one Learning Card module. Add new `type` cases without redesigning the card shell.
  */
-export function LearningModuleView({ module }: Props) {
+export function LearningModuleView({ module, index = 0 }: Props) {
   switch (module.type) {
     case "hero":
       return <HeroModule module={module} />;
     case "hear_word":
-      return <HearWordModule module={module} />;
+      return <HearWordModule module={module} index={index} />;
     case "fun_fact":
-      return <FunFactModule module={module} />;
+      return <FunFactModule module={module} index={index} />;
     case "quiz":
-      return <QuizModule module={module} />;
+      return <QuizModule module={module} index={index} />;
     case "wonder":
-      return <WonderModule module={module} />;
+      return <WonderModule module={module} index={index} />;
     case "challenge":
-      return <ChallengeModule module={module} />;
+      return <ChallengeModule module={module} index={index} />;
     case "progress":
-      return <ProgressModule module={module} />;
+      return <ProgressModule module={module} index={index} />;
     case "related":
-      return <RelatedModule module={module} />;
+      return <RelatedModule module={module} index={index} />;
     case "save_status":
       return <SaveStatusModule module={module} />;
     case "future":
@@ -44,18 +51,31 @@ export function LearningModuleView({ module }: Props) {
   }
 }
 
+const TINTS: NonNullable<ComponentProps<typeof SoftCard>["tint"]>[] = [
+  "blue",
+  "yellow",
+  "green",
+  "coral",
+  "lavender",
+  "aqua",
+];
+
 function CardShell({
   children,
   eyebrow,
+  index = 0,
 }: {
   children: ReactNode;
   eyebrow?: string;
+  index?: number;
 }) {
   return (
-    <View style={[styles.card, shadows.soft]}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-      {children}
-    </View>
+    <SoftCard tint={TINTS[index % TINTS.length]} enterDelay={index * 60}>
+      <View style={styles.card}>
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+        {children}
+      </View>
+    </SoftCard>
   );
 }
 
@@ -63,7 +83,7 @@ function HeroModule({ module }: { module: Extract<LearningModule, { type: "hero"
   const showPhoto =
     !!module.photoUri && !module.photoUri.startsWith("mock-");
   return (
-    <View style={styles.hero}>
+    <Animated.View entering={FadeInDown.duration(380).springify()} style={styles.hero}>
       {showPhoto ? (
         <Image source={{ uri: module.photoUri! }} style={styles.heroPhoto} />
       ) : (
@@ -74,18 +94,22 @@ function HeroModule({ module }: { module: Extract<LearningModule, { type: "hero"
       <Text style={styles.heroName}>
         {module.emoji} {module.name}
       </Text>
-      <Text style={styles.heroCategory}>{module.categoryLabel}</Text>
-    </View>
+      <View style={styles.heroCategoryPill}>
+        <Text style={styles.heroCategory}>{module.categoryLabel}</Text>
+      </View>
+    </Animated.View>
   );
 }
 
 function HearWordModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "hear_word" }>;
+  index: number;
 }) {
   return (
-    <CardShell eyebrow="Hear the word">
+    <CardShell eyebrow="🔊 Hear the word" index={index}>
       <Text style={styles.word}>{module.word}</Text>
       <Text style={styles.pronunciation}>{module.pronunciation}</Text>
       <Text style={styles.hint}>Say it together out loud</Text>
@@ -95,11 +119,13 @@ function HearWordModule({
 
 function FunFactModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "fun_fact" }>;
+  index: number;
 }) {
   return (
-    <CardShell eyebrow="Fun fact">
+    <CardShell eyebrow="💡 Fun fact" index={index}>
       <Text style={styles.body}>{module.fact}</Text>
     </CardShell>
   );
@@ -107,51 +133,104 @@ function FunFactModule({
 
 function QuizModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "quiz" }>;
+  index: number;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const answered = selected !== null;
   const correct = answered && selected === module.answerIndex;
 
   return (
-    <CardShell eyebrow="Mini quiz">
+    <CardShell eyebrow="❓ Mini quiz" index={index}>
       <Text style={styles.question}>{module.question}</Text>
-      {module.choices.map((choice, index) => {
-        const isSelected = selected === index;
-        const isAnswer = index === module.answerIndex;
+      {module.choices.map((choice, choiceIdx) => {
+        const isSelected = selected === choiceIdx;
+        const isAnswer = choiceIdx === module.answerIndex;
         return (
-          <Pressable
+          <QuizChoiceButton
             key={choice}
-            style={[
-              styles.choice,
-              isSelected && styles.choiceSelected,
-              answered && isAnswer && styles.choiceCorrect,
-              answered && isSelected && !isAnswer && styles.choiceWrong,
-            ]}
+            choice={choice}
             disabled={answered}
-            onPress={() => setSelected(index)}
-          >
-            <Text style={styles.choiceText}>{choice}</Text>
-          </Pressable>
+            isSelected={isSelected}
+            isAnswer={isAnswer}
+            answered={answered}
+            onPress={() => setSelected(choiceIdx)}
+          />
         );
       })}
       {answered ? (
         <Text style={styles.feedback}>
-          {correct ? "Nice!" : "Almost — try noticing again next time."}
+          {correct ? "🎉 Nice!" : "Almost — try noticing again next time."}
         </Text>
       ) : null}
     </CardShell>
   );
 }
 
+function QuizChoiceButton({
+  choice,
+  disabled,
+  isSelected,
+  isAnswer,
+  answered,
+  onPress,
+}: {
+  choice: string;
+  disabled: boolean;
+  isSelected: boolean;
+  isAnswer: boolean;
+  answered: boolean;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const showCorrect = answered && isAnswer;
+
+  useEffect(() => {
+    if (showCorrect) {
+      scale.value = withSequence(
+        withSpring(1.05, { damping: 8, stiffness: 260 }),
+        withSpring(1, { damping: 10, stiffness: 220 }),
+      );
+    }
+  }, [scale, showCorrect]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <PlayfulPressable
+        style={[
+          styles.choice,
+          isSelected && styles.choiceSelected,
+          showCorrect && styles.choiceCorrect,
+          answered && isSelected && !isAnswer && styles.choiceWrong,
+        ]}
+        disabled={disabled}
+        bounce={!disabled}
+        onPress={onPress}
+      >
+        <Text style={styles.choiceText}>
+          {showCorrect ? "✓ " : ""}
+          {choice}
+        </Text>
+      </PlayfulPressable>
+    </Animated.View>
+  );
+}
+
 function WonderModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "wonder" }>;
+  index: number;
 }) {
   return (
-    <CardShell eyebrow="Wonder question">
+    <CardShell eyebrow="🌟 Wonder question" index={index}>
       <Text style={styles.body}>{module.prompt}</Text>
     </CardShell>
   );
@@ -159,11 +238,13 @@ function WonderModule({
 
 function ChallengeModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "challenge" }>;
+  index: number;
 }) {
   return (
-    <CardShell eyebrow="Challenge">
+    <CardShell eyebrow="🎯 Challenge" index={index}>
       <Text style={styles.body}>{module.text}</Text>
     </CardShell>
   );
@@ -171,16 +252,16 @@ function ChallengeModule({
 
 function ProgressModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "progress" }>;
+  index: number;
 }) {
-  const ratio = module.total > 0 ? module.completed / module.total : 0;
+  const ratio = module.total > 0 ? (module.completed / module.total) * 100 : 0;
   return (
-    <CardShell eyebrow="Learning progress">
+    <CardShell eyebrow="📈 Learning progress" index={index}>
       <Text style={styles.progressTitle}>{module.label}</Text>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
-      </View>
+      <AnimatedProgressBar progress={ratio} color={colors.coral} height={16} />
       <Text style={styles.hint}>
         {module.completed} of {module.total} found
       </Text>
@@ -190,11 +271,13 @@ function ProgressModule({
 
 function RelatedModule({
   module,
+  index,
 }: {
   module: Extract<LearningModule, { type: "related" }>;
+  index: number;
 }) {
   return (
-    <CardShell eyebrow={module.title}>
+    <CardShell eyebrow={module.title} index={index}>
       {module.items.map((item) => (
         <Text key={item.id} style={styles.relatedLine}>
           {item.emoji} {item.name}
@@ -210,9 +293,9 @@ function SaveStatusModule({
   module: Extract<LearningModule, { type: "save_status" }>;
 }) {
   return (
-    <View style={styles.saveBadge}>
+    <Animated.View entering={FadeInDown.duration(320)} style={styles.saveBadge}>
       <Text style={styles.saveText}>✓ {module.message}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -231,8 +314,6 @@ function FutureModule({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.xl,
     padding: 20,
     gap: 10,
   },
@@ -241,37 +322,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.7,
     textTransform: "uppercase",
-    color: colors.moss,
+    color: colors.grass,
   },
   hero: {
-    gap: 8,
+    gap: 10,
     marginBottom: 4,
+    alignItems: "center",
   },
   heroPhoto: {
     width: "100%",
-    height: 220,
-    borderRadius: radii.xl,
+    height: 230,
+    borderRadius: radii.xxl,
     backgroundColor: colors.pastelBlue,
   },
   heroFallback: {
-    height: 180,
-    borderRadius: radii.xl,
+    width: "100%",
+    height: 190,
+    borderRadius: radii.xxl,
     backgroundColor: colors.pastelYellow,
     alignItems: "center",
     justifyContent: "center",
   },
   heroEmoji: {
-    fontSize: 64,
+    fontSize: 72,
   },
   heroName: {
     fontFamily: fonts.display,
     fontSize: 32,
     color: colors.navy,
+    textAlign: "center",
+  },
+  heroCategoryPill: {
+    backgroundColor: colors.pastelGreen,
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   heroCategory: {
     fontFamily: fonts.bodySemi,
-    fontSize: 15,
-    color: colors.inkMuted,
+    fontSize: 14,
+    color: colors.grassDeep,
   },
   word: {
     fontFamily: fonts.display,
@@ -296,18 +386,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   choice: {
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.stroke,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: colors.cream,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: "transparent",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceRaised,
+    minHeight: 48,
+    justifyContent: "center",
   },
   choiceSelected: {
-    borderColor: colors.orange,
+    borderColor: colors.coral,
   },
   choiceCorrect: {
-    borderColor: colors.success,
+    borderColor: colors.grassDeep,
     backgroundColor: colors.pastelGreen,
   },
   choiceWrong: {
@@ -321,7 +413,7 @@ const styles = StyleSheet.create({
   feedback: {
     fontFamily: fonts.bodySemi,
     fontSize: 15,
-    color: colors.moss,
+    color: colors.grass,
   },
   hint: {
     fontFamily: fonts.body,
@@ -333,16 +425,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.navy,
   },
-  progressTrack: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: colors.mossSoft,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.orange,
-  },
   relatedLine: {
     fontFamily: fonts.bodySemi,
     fontSize: 16,
@@ -351,19 +433,20 @@ const styles = StyleSheet.create({
   },
   saveBadge: {
     backgroundColor: colors.pastelGreen,
-    borderRadius: radii.lg,
-    paddingVertical: 12,
+    borderRadius: radii.xl,
+    paddingVertical: 14,
     paddingHorizontal: 16,
+    ...shadows.soft,
   },
   saveText: {
     fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.mossDeep,
+    fontSize: 15,
+    color: colors.grassDeep,
     textAlign: "center",
   },
   futureCard: {
     borderRadius: radii.xl,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.stroke,
     borderStyle: "dashed",
     padding: 18,

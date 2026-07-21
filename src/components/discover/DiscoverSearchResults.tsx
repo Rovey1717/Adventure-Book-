@@ -1,5 +1,8 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { PlayfulPressable } from "@/components/ui/PlayfulPressable";
+import { SoftCard } from "@/components/ui/SoftCard";
+import { SparkleRow } from "@/components/ui/PulseGlow";
+import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import type { LibraryEntry } from "@/domain/library/types";
@@ -20,78 +23,92 @@ export function DiscoverSearchResults({ results, query, onSelect }: Props) {
   if (query.trim().length === 0) return null;
 
   return (
-    <View style={styles.panel}>
-      <Text style={styles.heading}>
-        {results.length > 0 ? "Garden discoveries" : "No matches yet"}
-      </Text>
-      {results.length === 0 ? (
-        <Text style={styles.empty}>
-          Try Butterfly, Bee, Flower, or Garden — or capture something new.
+    <SoftCard tint="blue" style={styles.panel}>
+      <View style={styles.inner}>
+        <Text style={styles.heading}>
+          {results.length > 0 ? "🌼 Garden discoveries" : "Hmm, nothing yet!"}
         </Text>
-      ) : (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {results.map((entry) => {
-            const node = learningGraph.getNode(entry.id);
-            return (
-              <Pressable
-                key={entry.id}
-                style={styles.card}
-                onPress={() => onSelect(entry)}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${entry.title} discovery card`}
-              >
-                <Text style={styles.emoji}>
-                  {node?.emoji ??
-                    emojiForLibraryEntry(entry.title, entry.categoryId)}
-                </Text>
-                <View style={styles.copy}>
-                  <Text style={styles.title}>{entry.title}</Text>
-                  <Text style={styles.fact} numberOfLines={2}>
-                    {entry.facts[0]}
-                  </Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
-      <Text style={styles.footnote}>
-        Graph search only — never creates memories, adventures, or Journey
-        progress
-      </Text>
-    </View>
+        {results.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyEmoji}>🦋</Text>
+            <Text style={styles.empty}>
+              Try Butterfly, Bee, Flower, or Garden — or capture something new!
+            </Text>
+            <SparkleRow count={3} />
+          </View>
+        ) : (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {results.map((entry) => {
+              const node = learningGraph.getNode(entry.id);
+              const emoji =
+                node?.emoji ??
+                emojiForLibraryEntry(entry.title, entry.categoryId);
+              return (
+                <PlayfulPressable
+                  key={entry.id}
+                  style={styles.card}
+                  onPress={() => onSelect(entry)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${entry.title} discovery card`}
+                >
+                  <View style={styles.emojiBubble}>
+                    <Text style={styles.emoji}>{emoji}</Text>
+                  </View>
+                  <View style={styles.copy}>
+                    <Text style={styles.title}>{entry.title}</Text>
+                    <Text style={styles.fact} numberOfLines={2}>
+                      {entry.facts[0]}
+                    </Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </PlayfulPressable>
+              );
+            })}
+          </ScrollView>
+        )}
+        <Text style={styles.footnote}>
+          Graph search only — never creates memories, adventures, or Journey
+          progress
+        </Text>
+      </View>
+    </SoftCard>
   );
 }
 
 const styles = StyleSheet.create({
   panel: {
     marginTop: 10,
-    backgroundColor: "rgba(255,249,241,0.96)",
-    borderRadius: 22,
+    maxHeight: 340,
+  },
+  inner: {
     padding: 14,
-    maxHeight: 320,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    gap: 10,
   },
   heading: {
     fontFamily: fonts.displaySemi,
-    fontSize: 16,
+    fontSize: 17,
     color: colors.ink,
     paddingHorizontal: 2,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+  },
+  emptyEmoji: {
+    fontSize: 40,
   },
   empty: {
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkMuted,
-    paddingVertical: 6,
+    textAlign: "center",
   },
   list: {
     flexGrow: 0,
@@ -105,14 +122,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     backgroundColor: colors.surfaceRaised,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: colors.stroke,
+    minHeight: 48,
+    ...shadows.soft,
+  },
+  emojiBubble: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.pastelYellow,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   copy: {
     flex: 1,
@@ -132,7 +157,7 @@ const styles = StyleSheet.create({
   chevron: {
     fontFamily: fonts.display,
     fontSize: 26,
-    color: colors.moss,
+    color: colors.skyBlue,
     lineHeight: 28,
   },
   footnote: {

@@ -8,9 +8,14 @@ import type {
 } from "@/domain/learning/card";
 import type { LibraryEntry } from "@/domain/library/types";
 import type { Memory } from "@/domain/memory/types";
+import { getDemoLearningProfile } from "@/domain/parent/profile";
 import type { MemoryCategory } from "@/domain/shared/categories";
 import type { LibraryService } from "@/services/LibraryService";
 import type { LearningGraphService } from "@/services/graph/LearningGraphService";
+import {
+  learningLevelForAge,
+  type LearningLevel,
+} from "@/intelligence/types/progression";
 
 function categoryLabel(category: MemoryCategory): string {
   switch (category) {
@@ -69,17 +74,119 @@ function fallbackFact(name: string): string {
   return `${name} is something wonderful you found in the real world — noticing it is the first step of learning.`;
 }
 
-function fallbackWonder(name: string): string {
-  return `What do you wonder about the ${name}?`;
+const SPANISH: Record<string, { word: string; pronunciation: string }> = {
+  "fire truck": {
+    word: "camión de bomberos",
+    pronunciation: "kah-MYOHN deh boh-MEH-rohs",
+  },
+  firefighter: {
+    word: "bombero",
+    pronunciation: "boh-MEH-roh",
+  },
+};
+
+/**
+ * Discovery-tied, age-leveled quiz — never a random unrelated subject.
+ */
+function quizForDiscovery(
+  name: string,
+  level: LearningLevel,
+  entry: LibraryEntry | null,
+): { question: string; choices: string[]; answerIndex: number } {
+  const fromLibrary = entry?.quiz[0];
+  // Only use library quiz if it clearly mentions this discovery.
+  if (
+    fromLibrary &&
+    fromLibrary.question.toLowerCase().includes(name.toLowerCase().split(" ")[0]!)
+  ) {
+    return fromLibrary;
+  }
+
+  switch (level) {
+    case 1:
+      return {
+        question: `What color do you notice on the ${name}?`,
+        choices: ["A bright color", "Invisible", "A password"],
+        answerIndex: 0,
+      };
+    case 2:
+      return {
+        question: `Who uses a ${name}?`,
+        choices: ["A community helper", "A pirate", "A robot"],
+        answerIndex: 0,
+      };
+    case 3:
+      return {
+        question: `Why do we need a ${name}?`,
+        choices: [
+          "It helps people in the real world",
+          "It is only a toy",
+          "It is a homework sheet",
+        ],
+        answerIndex: 0,
+      };
+    case 4:
+      return {
+        question: `How does a ${name} work?`,
+        choices: [
+          "It uses special parts to do an important job",
+          "It runs on homework",
+          "It only looks cool",
+        ],
+        answerIndex: 0,
+      };
+    case 5:
+      return {
+        question: `How does ${name} connect to your community?`,
+        choices: [
+          "Real people use it to help others",
+          "It is unrelated to people",
+          "It only exists in books",
+        ],
+        answerIndex: 0,
+      };
+  }
 }
 
-function fallbackChallenge(name: string): string {
-  return `Can you find something related to ${name} on your next adventure?`;
+function wonderForLevel(name: string, level: LearningLevel): string {
+  switch (level) {
+    case 1:
+      return `Can you point to the ${name}? What sound does it make?`;
+    case 2:
+      return `Who drives or uses a ${name}?`;
+    case 3:
+      return `Why does a ${name} carry the tools it needs?`;
+    case 4:
+      return `How do the parts of a ${name} work together?`;
+    case 5:
+      return `How does your local community rely on a ${name}?`;
+  }
 }
+
+function challengeForLevel(name: string, level: LearningLevel): string {
+  switch (level) {
+    case 1:
+      return `Point to the ${name} and say its name out loud.`;
+    case 2:
+      return `Count something on the ${name} (wheels, doors, or colors).`;
+    case 3:
+      return `Draw the ${name} and label one important part.`;
+    case 4:
+      return `Compare a ${name} to something similar you have seen.`;
+    case 5:
+      return `Research how people near you use a ${name} to help others.`;
+  }
+}
+
+export type LearningCardOptions = {
+  age?: number;
+  spanishEnabled?: boolean;
+};
 
 /**
  * Builds a modular Learning Card from Library + Learning Graph when available.
- * Runs after save (background) so Adventure Book always has content ready.
+ * Content is always about THIS discovery and THIS child's learning level.
+ * Spanish modules appear only when parent-enabled.
  */
 export class LearningAdventureService {
   constructor(
@@ -90,7 +197,14 @@ export class LearningAdventureService {
   generateForMemory(
     memory: Memory,
     discoveredNames: string[],
+    options: LearningCardOptions = {},
   ): LearningCardSnapshot {
+    const profile = getDemoLearningProfile();
+    const age = options.age ?? profile.age;
+    const spanishEnabled =
+      options.spanishEnabled ?? profile.spanishEnabled;
+    const level = learningLevelForAge(age);
+
     const entry =
       this.library.search(memory.objectName).find(
         (item) =>
@@ -107,7 +221,15 @@ export class LearningAdventureService {
       ? collectionProgress(collection, discoveredNames)
       : null;
 
-    const modules = this.buildModules(memory, entry, related, collection, progress);
+    const modules = this.buildModules({
+      memory,
+      entry,
+      related,
+      collection,
+      progress,
+      level,
+      spanishEnabled,
+    });
 
     const unlockCandidate = collection
       ? {
@@ -130,22 +252,22 @@ export class LearningAdventureService {
     };
   }
 
-  private buildModules(
-    memory: Memory,
-    entry: LibraryEntry | null,
-    related: Array<{ id: string; name: string; emoji: string }>,
-    collection: ReturnType<typeof collectionForDiscovery>,
-    progress: ReturnType<typeof collectionProgress> | null,
-  ): LearningModule[] {
+  private buildModules(input: {
+    memory: Memory;
+    entry: LibraryEntry | null;
+    related: Array<{ id: string; name: string; emoji: string }>;
+    collection: ReturnType<typeof collectionForDiscovery>;
+    progress: ReturnType<typeof collectionProgress> | null;
+    level: LearningLevel;
+    spanishEnabled: boolean;
+  }): LearningModule[] {
+    const { memory, entry, related, collection, progress, level, spanishEnabled } =
+      input;
     const name = memory.objectName;
     const emoji = emojiFor(name, memory.category);
     const fact = entry?.facts[0] ?? fallbackFact(name);
     const pronunciation = entry?.pronunciation ?? name;
-    const quiz = entry?.quiz[0] ?? {
-      question: `Which one did you just discover?`,
-      choices: [name, "A password", "A homework sheet"],
-      answerIndex: 0,
-    };
+    const quiz = quizForDiscovery(name, level, entry);
 
     const modules: LearningModule[] = [
       {
@@ -176,15 +298,28 @@ export class LearningAdventureService {
       },
       {
         type: "wonder",
-        prompt: fallbackWonder(name),
+        prompt: wonderForLevel(name, level),
       },
       {
         type: "challenge",
         text: collection
-          ? `Can you find another ${collection.title.toLowerCase()} helper in the real world?`
-          : fallbackChallenge(name),
+          ? `Can you find another ${collection.title.toLowerCase()} helper related to ${name}?`
+          : challengeForLevel(name, level),
       },
     ];
+
+    // Spanish integrates into THIS discovery — only when enabled.
+    if (spanishEnabled) {
+      const pair = SPANISH[name.toLowerCase()] ?? {
+        word: name,
+        pronunciation: name,
+      };
+      modules.push({
+        type: "hear_word",
+        word: `${name} → ${pair.word}`,
+        pronunciation: pair.pronunciation,
+      });
+    }
 
     if (collection && progress) {
       modules.push({
@@ -207,7 +342,6 @@ export class LearningAdventureService {
       });
     }
 
-    // Extensibility hook — not interactive yet.
     modules.push({
       type: "future",
       id: "stories",

@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii, shadows } from "@/constants/theme";
+import { StyleSheet, Text, View } from "react-native";
+import { PlayfulPressable, SoftCard } from "@/components/ui";
+import { colors, fonts, radii } from "@/constants/theme";
 import type { NextAdventureRecommendation } from "@/domain/graph/types";
 
 type Props = {
@@ -20,33 +21,33 @@ export function WhyThisIsNext({
   if (!recommendation) return null;
 
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.eyebrow}>🌼 Next Adventure</Text>
-      <Text style={styles.title}>
-        Discover a {recommendation.name}
-      </Text>
-      <Text style={styles.whyLabel}>Why this is next</Text>
-      <Text style={styles.reason}>{recommendation.reason}</Text>
-      <Text style={styles.from}>
-        Connected from {recommendation.fromName}
-        {masteryLabel ? ` · ${masteryLabel}` : ""}
-      </Text>
-      <Pressable
-        style={styles.cta}
-        onPress={() => onOpen(recommendation.nodeId)}
-      >
-        <Text style={styles.ctaText}>
-          {recommendation.emoji} Explore {recommendation.name}
+    <SoftCard tint="green" shimmer float>
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>🌼 Next Adventure</Text>
+        <Text style={styles.title}>
+          Discover a {recommendation.name}
         </Text>
-      </Pressable>
-    </View>
+        <Text style={styles.whyLabel}>Why this is next</Text>
+        <Text style={styles.reason}>{recommendation.reason}</Text>
+        <Text style={styles.from}>
+          Connected from {recommendation.fromName}
+          {masteryLabel ? ` · ${masteryLabel}` : ""}
+        </Text>
+        <PlayfulPressable
+          style={styles.cta}
+          onPress={() => onOpen(recommendation.nodeId)}
+        >
+          <Text style={styles.ctaText}>
+            {recommendation.emoji} Explore {recommendation.name}
+          </Text>
+        </PlayfulPressable>
+      </View>
+    </SoftCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.pastelGreen,
-    borderRadius: radii.xl,
     padding: 20,
     gap: 8,
   },
@@ -54,7 +55,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 13,
     letterSpacing: 0.6,
-    color: colors.mossDeep,
+    color: colors.grassDeep,
   },
   title: {
     fontFamily: fonts.display,
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
   whyLabel: {
     fontFamily: fonts.bodyBold,
     fontSize: 13,
-    color: colors.moss,
+    color: colors.grass,
     marginTop: 4,
   },
   reason: {
@@ -81,9 +82,9 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: 8,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.grassDeep,
     borderRadius: radii.pill,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: "center",
   },
   ctaText: {

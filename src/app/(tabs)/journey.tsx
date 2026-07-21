@@ -1,22 +1,74 @@
 import { useCallback } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  AnimatedProgressBar,
+  MagicalBackground,
+  PlayfulPressable,
+  SoftCard,
+} from "@/components/ui";
 import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+
+type Tint = "white" | "blue" | "yellow" | "green" | "coral" | "lavender" | "aqua";
 
 function StatCard({
   label,
   value,
+  tint,
+  enterDelay,
 }: {
   label: string;
   value: string | number;
+  tint: Tint;
+  enterDelay: number;
 }) {
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <SoftCard tint={tint} float style={styles.statCard} enterDelay={enterDelay}>
+      <View style={styles.statInner}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </SoftCard>
+  );
+}
+
+function Panel({
+  title,
+  tint,
+  children,
+}: {
+  title: string;
+  tint: Tint;
+  children: React.ReactNode;
+}) {
+  return (
+    <SoftCard tint={tint} style={styles.panel}>
+      <View style={styles.panelInner}>
+        <Text style={styles.panelTitle}>{title}</Text>
+        {children}
+      </View>
+    </SoftCard>
+  );
+}
+
+function PillList({
+  items,
+  color,
+  background,
+}: {
+  items: string[];
+  color: string;
+  background: string;
+}) {
+  return (
+    <View style={styles.pillWrap}>
+      {items.map((item) => (
+        <View key={item} style={[styles.pill, { backgroundColor: background }]}>
+          <Text style={[styles.pillText, { color }]}>{item}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -44,13 +96,16 @@ export default function JourneyScreen() {
     return node?.category === "animals";
   }).length;
 
+  const weeklyPercent = Math.min(
+    100,
+    ((snapshot?.weeklyGoal.current ?? 0) / (snapshot?.weeklyGoal.target ?? 5)) *
+      100,
+  );
+
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.skyTop, colors.skyMid, colors.skyBottom]}
-        style={StyleSheet.absoluteFill}
-      />
+    <MagicalBackground variant="garden">
       <ScrollView
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={{
           paddingTop: insets.top + 12,
           paddingBottom: insets.bottom + 32,
@@ -59,7 +114,7 @@ export default function JourneyScreen() {
         }}
       >
         <View style={styles.header}>
-          <Text style={styles.heading}>Journey</Text>
+          <Text style={styles.heading}>🌻 Journey</Text>
           <Text style={styles.subheading}>
             Progress that grows with every real-world discovery.
           </Text>
@@ -69,159 +124,152 @@ export default function JourneyScreen() {
           <StatCard
             label="🔥 Current Streak"
             value={snapshot?.streakDays ?? 0}
+            tint="coral"
+            enterDelay={0}
           />
           <StatCard
             label="🌎 Total Discoveries"
             value={snapshot?.totalDiscoveries ?? 0}
+            tint="blue"
+            enterDelay={60}
           />
-          <StatCard label="+ Animals" value={animalsInGraph} />
+          <StatCard label="+ Animals" value={animalsInGraph} tint="green" enterDelay={120} />
           <StatCard
             label="🏡 Garden Progress"
             value={`${garden.percent}%`}
+            tint="yellow"
+            enterDelay={180}
           />
         </View>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>🏡 Garden Learning Graph</Text>
+        <Panel title="🏡 Garden Learning Graph" tint="green">
           <Text style={styles.panelBody}>
             {garden.discovered} / {garden.total} garden discoveries connected
           </Text>
-          <View style={styles.track}>
-            <View
-              style={[
-                styles.fill,
-                { width: `${Math.min(100, garden.percent)}%` },
-              ]}
-            />
-          </View>
-        </View>
+          <AnimatedProgressBar
+            progress={Math.min(100, garden.percent)}
+            color={colors.grass}
+            style={styles.progressBar}
+          />
+        </Panel>
 
         {next ? (
-          <Pressable
-            style={styles.nextCard}
+          <PlayfulPressable
+            tilt
             onPress={() => router.push(`/library/${next.nodeId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Discover a ${next.name} next`}
           >
-            <Text style={styles.nextEyebrow}>🌼 Next Recommendation</Text>
-            <Text style={styles.nextTitle}>
-              {next.emoji} Discover a {next.name}
-            </Text>
-            <Text style={styles.nextReason}>{next.reason}</Text>
-            <Text style={styles.nextFrom}>From {next.fromName}</Text>
-          </Pressable>
+            <SoftCard tint="coral" shimmer style={styles.nextCard}>
+              <View style={styles.nextInner}>
+                <Text style={styles.nextEyebrow}>🌼 Next Recommendation</Text>
+                <Text style={styles.nextTitle}>
+                  {next.emoji} Discover a {next.name}
+                </Text>
+                <Text style={styles.nextReason}>{next.reason}</Text>
+                <Text style={styles.nextFrom}>From {next.fromName}</Text>
+              </View>
+            </SoftCard>
+          </PlayfulPressable>
         ) : null}
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>🎯 Weekly Goals</Text>
+        <Panel title="🎯 Weekly Goals" tint="blue">
           <Text style={styles.panelBody}>
             {snapshot?.weeklyGoal.current ?? 0} /{" "}
             {snapshot?.weeklyGoal.target ?? 5} discoveries this week
           </Text>
-          <View style={styles.track}>
-            <View
-              style={[
-                styles.fill,
-                {
-                  width: `${Math.min(
-                    100,
-                    ((snapshot?.weeklyGoal.current ?? 0) /
-                      (snapshot?.weeklyGoal.target ?? 5)) *
-                      100,
-                  )}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
+          <AnimatedProgressBar
+            progress={weeklyPercent}
+            color={colors.coral}
+            style={styles.progressBar}
+          />
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>🏅 Badges</Text>
+        <Panel title="🏅 Badges" tint="yellow">
           {(snapshot?.badges.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Earn your first badge by discovering something outside.
             </Text>
           ) : (
-            snapshot?.badges.map((badge) => (
-              <Text key={badge.id} style={styles.badge}>
-                {badge.title}
-              </Text>
-            ))
+            <PillList
+              items={snapshot!.badges.map((badge) => badge.title)}
+              color={colors.sunshineDeep}
+              background="rgba(255,255,255,0.7)"
+            />
           )}
-        </View>
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>⭐ Favorite Memories</Text>
+        <Panel title="⭐ Favorite Memories" tint="coral">
           {(snapshot?.favoriteMemories.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Star memories in Adventure Book to see them here.
             </Text>
           ) : (
-            snapshot?.favoriteMemories.map((memory) => (
-              <Text key={memory.id} style={styles.badge}>
-                {memory.objectName}
-              </Text>
-            ))
+            <PillList
+              items={snapshot!.favoriteMemories.map((memory) => memory.objectName)}
+              color={colors.coralDeep}
+              background="rgba(255,255,255,0.7)"
+            />
           )}
-        </View>
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Collections</Text>
+        <Panel title="Collections" tint="aqua">
           {(snapshot?.collections.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Collections grow as you explore.
             </Text>
           ) : (
-            snapshot?.collections.map((collection) => (
-              <Text key={collection.id} style={styles.badge}>
-                {collection.title}: {collection.count}
-              </Text>
-            ))
+            <PillList
+              items={snapshot!.collections.map(
+                (collection) => `${collection.title}: ${collection.count}`,
+              )}
+              color={colors.aquaDeep}
+              background="rgba(255,255,255,0.7)"
+            />
           )}
-        </View>
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Upcoming Adventures</Text>
+        <Panel title="Upcoming Adventures" tint="lavender">
           {(snapshot?.upcomingAdventures.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Unlock adventures by capturing real-world discoveries.
             </Text>
           ) : (
-            snapshot?.upcomingAdventures.map((adventure) => (
-              <Text key={adventure.id} style={styles.badge}>
-                {adventure.title}
-              </Text>
-            ))
+            <PillList
+              items={snapshot!.upcomingAdventures.map(
+                (adventure) => adventure.title,
+              )}
+              color={colors.lavenderInk}
+              background="rgba(255,255,255,0.7)"
+            />
           )}
-        </View>
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Recently Completed Adventures</Text>
+        <Panel title="Recently Completed Adventures" tint="green">
           {(snapshot?.recentlyCompletedAdventures.length ?? 0) === 0 ? (
             <Text style={styles.panelBody}>
               Complete an adventure to fill this list.
             </Text>
           ) : (
-            snapshot?.recentlyCompletedAdventures.map((adventure) => (
-              <Text key={adventure.id} style={styles.badge}>
-                {adventure.title}
-              </Text>
-            ))
+            <PillList
+              items={snapshot!.recentlyCompletedAdventures.map(
+                (adventure) => adventure.title,
+              )}
+              color={colors.mossDeep}
+              background="rgba(255,255,255,0.7)"
+            />
           )}
-        </View>
+        </Panel>
 
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Discovery Timeline</Text>
-          <Text style={styles.panelBody}>Coming soon</Text>
-        </View>
+        <Panel title="Discovery Timeline" tint="white">
+          <Text style={styles.panelBody}>🗺️ Coming soon</Text>
+        </Panel>
       </ScrollView>
-    </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.skyMid,
-  },
   header: {
     gap: 6,
   },
@@ -239,13 +287,13 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 12,
   },
-  stat: {
-    width: "48%",
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 18,
-    padding: 14,
+  statCard: {
+    width: "47%",
+  },
+  statInner: {
+    padding: 16,
     gap: 4,
   },
   statValue: {
@@ -258,15 +306,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.inkMuted,
   },
-  panel: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 18,
-    padding: 16,
-    gap: 8,
+  panel: {},
+  panelInner: {
+    padding: 18,
+    gap: 10,
   },
   panelTitle: {
     fontFamily: fonts.displaySemi,
-    fontSize: 18,
+    fontSize: 19,
     color: colors.ink,
   },
   panelBody: {
@@ -275,49 +322,48 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     lineHeight: 20,
   },
-  track: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.mossSoft,
-    overflow: "hidden",
-    marginTop: 4,
+  progressBar: {
+    marginTop: 2,
   },
-  fill: {
-    height: "100%",
-    backgroundColor: colors.moss,
+  pillWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  badge: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 14,
-    color: colors.ink,
-    paddingVertical: 4,
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
   },
-  nextCard: {
-    backgroundColor: colors.pastelGreen,
-    borderRadius: radii.xl,
-    padding: 18,
+  pillText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+  },
+  nextCard: {},
+  nextInner: {
+    padding: 20,
     gap: 6,
   },
   nextEyebrow: {
     fontFamily: fonts.bodyBold,
     fontSize: 13,
-    color: colors.mossDeep,
+    color: colors.coralDeep,
   },
   nextTitle: {
     fontFamily: fonts.display,
     fontSize: 24,
-    color: colors.navy,
+    color: colors.ink,
   },
   nextReason: {
     fontFamily: fonts.body,
     fontSize: 15,
     lineHeight: 22,
-    color: colors.navy,
+    color: colors.inkMuted,
     fontStyle: "italic",
   },
   nextFrom: {
     fontFamily: fonts.bodySemi,
     fontSize: 13,
-    color: colors.navySoft,
+    color: colors.inkSoft,
   },
 });

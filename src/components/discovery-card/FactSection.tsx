@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii, shadows } from "@/constants/theme";
+import { SoftCard } from "@/components/ui";
+import { colors, fonts } from "@/constants/theme";
 
 type Props = {
   facts: string[];
@@ -8,30 +9,41 @@ type Props = {
 
 export function FactSection({ facts, vocabulary = [] }: Props) {
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.title}>Fun facts</Text>
-      {facts.map((fact) => (
-        <View key={fact} style={styles.row}>
-          <Text style={styles.bullet}>✦</Text>
-          <Text style={styles.fact}>{fact}</Text>
+    <SoftCard tint="yellow">
+      <View style={styles.card}>
+        <View style={styles.titleRow}>
+          <Text style={styles.titleEmoji}>💡</Text>
+          <Text style={styles.title}>Fun facts</Text>
         </View>
-      ))}
-      {vocabulary.length > 0 ? (
-        <View style={styles.vocab}>
-          <Text style={styles.vocabLabel}>Vocabulary</Text>
-          <Text style={styles.vocabText}>{vocabulary.join(" · ")}</Text>
-        </View>
-      ) : null}
-    </View>
+        {facts.map((fact) => (
+          <View key={fact} style={styles.row}>
+            <Text style={styles.bullet}>✦</Text>
+            <Text style={styles.fact}>{fact}</Text>
+          </View>
+        ))}
+        {vocabulary.length > 0 ? (
+          <View style={styles.vocab}>
+            <Text style={styles.vocabLabel}>Vocabulary</Text>
+            <Text style={styles.vocabText}>{vocabulary.join(" · ")}</Text>
+          </View>
+        ) : null}
+      </View>
+    </SoftCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.xl,
     padding: 20,
     gap: 12,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  titleEmoji: {
+    fontSize: 20,
   },
   title: {
     fontFamily: fonts.displaySemi,
@@ -44,7 +56,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   bullet: {
-    color: colors.orange,
+    color: colors.coral,
     fontFamily: fonts.bodyBold,
     marginTop: 2,
   },

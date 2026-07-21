@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import type { ContinueExploringItem } from "@/services/graph/LearningGraphService";
 
@@ -6,6 +7,14 @@ type Props = {
   items: ContinueExploringItem[];
   onSelect: (id: string) => void;
 };
+
+const CHIP_TINTS = [
+  colors.pastelPink,
+  colors.pastelBlue,
+  colors.pastelYellow,
+  colors.pastelGreen,
+  colors.pastelPurple,
+];
 
 /** Continue Exploring — graph neighbors of the current node. */
 export function ContinueExploring({ items, onSelect }: Props) {
@@ -19,19 +28,20 @@ export function ContinueExploring({ items, onSelect }: Props) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {items.map((item) => (
-          <Pressable
+        {items.map((item, index) => (
+          <PlayfulPressable
             key={item.id}
-            style={({ pressed }) => [
+            style={[
               styles.chip,
               shadows.soft,
-              pressed && styles.pressed,
+              { backgroundColor: CHIP_TINTS[index % CHIP_TINTS.length] },
             ]}
+            tilt
             onPress={() => onSelect(item.id)}
           >
             <Text style={styles.emoji}>{item.emoji}</Text>
             <Text style={styles.name}>{item.name}</Text>
-          </Pressable>
+          </PlayfulPressable>
         ))}
       </ScrollView>
     </View>
@@ -52,19 +62,15 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   chip: {
-    width: 108,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
+    width: 112,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     paddingHorizontal: 10,
     alignItems: "center",
     gap: 8,
   },
-  pressed: {
-    opacity: 0.9,
-  },
   emoji: {
-    fontSize: 32,
+    fontSize: 34,
   },
   name: {
     fontFamily: fonts.bodyBold,

@@ -13,3 +13,6 @@ export { QuizSection } from "@/components/discovery-card/QuizSection";
 export { RelatedDiscoveries } from "@/components/discovery-card/RelatedDiscoveries";
 export { ContinueExploring } from "@/components/discovery-card/ContinueExploring";
 export { WhyThisIsNext } from "@/components/discovery-card/WhyThisIsNext";
+export { MemoryTimeline } from "@/components/discovery-card/MemoryTimeline";
+export { MemoryTimelineCard } from "@/components/discovery-card/MemoryTimelineCard";
+export { DiscoveryMemoryStatsBar } from "@/components/discovery-card/DiscoveryMemoryStatsBar";

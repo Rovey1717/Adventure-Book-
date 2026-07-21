@@ -1,7 +1,8 @@
 import type { AdventureRepository } from "@/data/adventure/AdventureRepository";
-import { ADVENTURE_BLUEPRINTS } from "@/domain/adventure/blueprints";
+import { selectBlueprintsForChild } from "@/domain/adventure/blueprints";
 import type { Adventure } from "@/domain/adventure/types";
 import type { Memory } from "@/domain/memory/types";
+import { getDemoLearningProfile } from "@/domain/parent/profile";
 
 export type AdventureBoard = {
   newAdventures: Adventure[];
@@ -11,9 +12,16 @@ export type AdventureBoard = {
   recentlyUnlocked: Adventure[];
 };
 
+export type UnlockOptions = {
+  age?: number;
+  spanishEnabled?: boolean;
+  parentGoals?: string[];
+};
+
 /**
  * Adventures domain — personalized learning from real-world discoveries only.
  * Never unlocks from Library search or manual creation.
+ * Never unlocks random Spanish — only when parent enables it / goals include it.
  */
 export class AdventureService {
   constructor(private readonly repository: AdventureRepository) {}
@@ -32,25 +40,43 @@ export class AdventureService {
 
   /**
    * Unlock adventures after a Memory is created from a real-world capture.
+   * Picks the next-best age-appropriate kinds for THIS discovery.
    */
-  async unlockFromMemory(memory: Memory): Promise<Adventure[]> {
+  async unlockFromMemory(
+    memory: Memory,
+    options: UnlockOptions = {},
+  ): Promise<Adventure[]> {
     const existing = await this.repository.getByMemoryId(memory.id);
     const existingKinds = new Set(existing.map((item) => item.kind));
     const now = new Date().toISOString();
 
-    const toCreate = ADVENTURE_BLUEPRINTS.filter(
-      (blueprint) => !existingKinds.has(blueprint.kind),
-    ).map((blueprint) => ({
-      memoryId: memory.id,
-      discoveryId: memory.discoveryId,
-      objectName: memory.objectName,
-      kind: blueprint.kind,
-      title: blueprint.titleFor(memory.objectName),
-      status: "unlocked" as const,
-      unlockedAt: now,
-      completedAt: null,
-      points: blueprint.points,
-    }));
+    const profile = getDemoLearningProfile();
+    const age = options.age ?? profile.age;
+    const goals = options.parentGoals ?? profile.parentGoals;
+    const spanishEnabled =
+      options.spanishEnabled ??
+      profile.spanishEnabled ??
+      goals.some((g) => g.toLowerCase().includes("spanish"));
+
+    const blueprints = selectBlueprintsForChild({
+      age,
+      spanishEnabled,
+      limit: 4,
+    });
+
+    const toCreate = blueprints
+      .filter((blueprint) => !existingKinds.has(blueprint.kind))
+      .map((blueprint) => ({
+        memoryId: memory.id,
+        discoveryId: memory.discoveryId,
+        objectName: memory.objectName,
+        kind: blueprint.kind,
+        title: blueprint.titleFor(memory.objectName),
+        status: "unlocked" as const,
+        unlockedAt: now,
+        completedAt: null,
+        points: blueprint.points,
+      }));
 
     if (toCreate.length === 0) {
       return existing;

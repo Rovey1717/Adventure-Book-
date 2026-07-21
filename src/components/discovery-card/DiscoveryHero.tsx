@@ -1,5 +1,16 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 
 type Props = {
@@ -21,37 +32,78 @@ export function DiscoveryHero({
   onToggleFavorite,
   onPlaySound,
 }: Props) {
+  const bob = useSharedValue(0);
+  const heartScale = useSharedValue(1);
+
+  useEffect(() => {
+    bob.value = withRepeat(
+      withSequence(
+        withTiming(-10, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+  }, [bob]);
+
+  useEffect(() => {
+    heartScale.value = withSequence(
+      withSpring(1.35, { damping: 8, stiffness: 320 }),
+      withSpring(1, { damping: 10, stiffness: 260 }),
+    );
+  }, [heartScale, isFavorite]);
+
+  const emojiStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value }],
+  }));
+
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
   return (
-    <View style={[styles.card, shadows.soft]}>
+    <View style={[styles.card, shadows.float]}>
       <LinearGradient
-        colors={[colors.peach, colors.cream, "#FFFCF7"]}
+        colors={[colors.pastelPink, colors.pastelYellow, colors.cream]}
         locations={[0, 0.55, 1]}
         style={styles.gradient}
       >
-        <Pressable
+        <View style={styles.sparkleTop} pointerEvents="none">
+          <Text style={styles.sparkle}>✦</Text>
+          <Text style={[styles.sparkle, styles.sparkleSmall]}>⋆</Text>
+        </View>
+
+        <PlayfulPressable
           style={styles.soundButton}
           onPress={onPlaySound}
           accessibilityLabel="Play pronunciation"
           hitSlop={8}
         >
           <Text style={styles.soundIcon}>🔊</Text>
-        </Pressable>
+        </PlayfulPressable>
 
-        <Text style={styles.emoji}>{emoji}</Text>
+        <Animated.Text style={[styles.emoji, emojiStyle]}>
+          {emoji}
+        </Animated.Text>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.meta}>
-          {categoryLabel}
-          {meta ? ` · ${meta}` : ""}
-        </Text>
+        <View style={styles.metaPill}>
+          <Text style={styles.meta}>
+            {categoryLabel}
+            {meta ? ` · ${meta}` : ""}
+          </Text>
+        </View>
 
         {onToggleFavorite ? (
-          <Pressable
+          <PlayfulPressable
             style={styles.favoriteFab}
             onPress={onToggleFavorite}
             accessibilityLabel={isFavorite ? "Unfavorite" : "Favorite"}
+            bounce
           >
-            <Text style={styles.favoriteIcon}>{isFavorite ? "♥" : "♡"}</Text>
-          </Pressable>
+            <Animated.Text style={[styles.favoriteIcon, heartStyle]}>
+              {isFavorite ? "♥" : "♡"}
+            </Animated.Text>
+          </PlayfulPressable>
         ) : null}
 
         <View style={styles.mascot} pointerEvents="none">
@@ -64,35 +116,52 @@ export function DiscoveryHero({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radii.xl,
+    borderRadius: radii.xxl,
     overflow: "hidden",
     backgroundColor: colors.surfaceRaised,
+    borderWidth: 1.5,
+    borderColor: colors.stroke,
   },
   gradient: {
-    minHeight: 260,
+    minHeight: 268,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 32,
+    paddingTop: 30,
+    paddingBottom: 34,
+  },
+  sparkleTop: {
+    position: "absolute",
+    top: 14,
+    left: "42%",
+    alignItems: "center",
+  },
+  sparkle: {
+    fontSize: 16,
+    color: colors.sunshineDeep,
+  },
+  sparkleSmall: {
+    fontSize: 12,
+    marginTop: -2,
+    color: colors.coral,
   },
   soundButton: {
     position: "absolute",
     top: 16,
     right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
     ...shadows.soft,
   },
   soundIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
   emoji: {
-    fontSize: 88,
+    fontSize: 92,
     marginBottom: 8,
   },
   title: {
@@ -101,28 +170,34 @@ const styles = StyleSheet.create({
     color: colors.navy,
     textAlign: "center",
   },
+  metaPill: {
+    marginTop: 8,
+    backgroundColor: "rgba(255,255,255,0.75)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
   meta: {
     fontFamily: fonts.bodySemi,
     fontSize: 14,
     color: colors.navySoft,
-    marginTop: 4,
     textAlign: "center",
   },
   favoriteFab: {
     position: "absolute",
     top: 16,
     left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
     ...shadows.soft,
   },
   favoriteIcon: {
-    fontSize: 20,
-    color: colors.orange,
+    fontSize: 22,
+    color: colors.coral,
   },
   mascot: {
     position: "absolute",

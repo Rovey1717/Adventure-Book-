@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import {
   learningStagesForObject,
@@ -22,9 +23,19 @@ export function LearningStages({
     <View style={styles.wrap}>
       <Text style={styles.heading}>✨ This grows with {childName}</Text>
       <View style={styles.list}>
-        {items.map((stage) => (
-          <View key={stage.age} style={[styles.card, shadows.soft]}>
-            <View style={[styles.icon, { backgroundColor: stage.soft }]}>
+        {items.map((stage, index) => (
+          <Animated.View
+            key={stage.age}
+            entering={FadeInDown.delay(index * 90)
+              .duration(360)
+              .springify()}
+            style={[
+              styles.card,
+              shadows.soft,
+              { backgroundColor: `${stage.soft}` },
+            ]}
+          >
+            <View style={[styles.icon, { backgroundColor: colors.surfaceRaised }]}>
               <Text style={[styles.glyph, { color: stage.accent }]}>
                 {stage.glyph}
               </Text>
@@ -43,7 +54,7 @@ export function LearningStages({
               <Text style={styles.title}>{stage.title}</Text>
               <Text style={styles.description}>{stage.description}</Text>
             </View>
-          </View>
+          </Animated.View>
         ))}
       </View>
     </View>
@@ -63,22 +74,24 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     padding: 14,
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.6)",
   },
   icon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.soft,
   },
   glyph: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: fonts.display,
   },
   copy: {
@@ -93,8 +106,8 @@ const styles = StyleSheet.create({
   },
   agePill: {
     borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   ageText: {
     fontFamily: fonts.bodyBold,

@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,9 +13,11 @@ import {
   AdventureBanner,
   ContinueExploring,
   DiscoveryHero,
+  DiscoveryMemoryStatsBar,
   FactSection,
   FamilyMemoryCard,
   LearningStages,
+  MemoryTimeline,
   QuizSection,
   QuickActionGrid,
   RelatedDiscoveries,
@@ -24,16 +25,24 @@ import {
   WhyThisIsNext,
   type QuickActionId,
 } from "@/components/discovery-card";
-import { colors, fonts, radii, space } from "@/constants/theme";
+import { MagicalBackground, PlayfulPressable } from "@/components/ui";
+import { colors, fonts, radii, shadows, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { emojiForLibraryEntry } from "@/domain/library/emoji";
 import { DEMO_CHILD_NAME } from "@/domain/parent/profile";
+import {
+  DEMO_INTELLIGENCE_CHILD_ID,
+  getIntelligenceLayer,
+} from "@/intelligence/createIntelligenceLayer";
+import type { DiscoveryMemoryTimeline } from "@/intelligence/types/discoveryMemoryTimeline";
 
 type SectionKey = "watch" | "facts" | "quiz" | "activities" | "adventure";
 
 /**
  * Discovery Card generated from a Learning Graph node.
  * Related / Continue Exploring / Next Adventure all come from graph traversal.
+ *
+ * Memory Timeline queries the Memory Graph — the card stores no memory data.
  */
 export default function LibraryDiscoveryCardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,6 +60,8 @@ export default function LibraryDiscoveryCardScreen() {
   const sectionY = useRef<Partial<Record<SectionKey, number>>>({});
   const [soundHint, setSoundHint] = useState<string | null>(null);
   const [, bump] = useState(0);
+  const [memoryTimeline, setMemoryTimeline] =
+    useState<DiscoveryMemoryTimeline | null>(null);
 
   const entry = useMemo(
     () => (id ? library.getEntry(id) : null),
@@ -114,6 +125,27 @@ export default function LibraryDiscoveryCardScreen() {
     );
   }, [adventureBoard, memory]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!entry) {
+      setMemoryTimeline(null);
+      return;
+    }
+
+    void (async () => {
+      const { familyAI } = await getIntelligenceLayer();
+      const timeline = await familyAI.discoveryMemoryTimeline({
+        childId: DEMO_INTELLIGENCE_CHILD_ID,
+        discoveryTitle: entry.title,
+      });
+      if (!cancelled) setMemoryTimeline(timeline);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [entry, memories]);
+
   const onSectionLayout =
     (key: SectionKey) => (event: LayoutChangeEvent) => {
       sectionY.current[key] = event.nativeEvent.layout.y;
@@ -169,12 +201,15 @@ export default function LibraryDiscoveryCardScreen() {
 
   if (!entry) {
     return (
-      <View style={[styles.root, styles.centered]}>
-        <Text style={styles.missingTitle}>Discovery not found</Text>
-        <Pressable style={styles.backPill} onPress={() => router.back()}>
-          <Text style={styles.backPillText}>Go back</Text>
-        </Pressable>
-      </View>
+      <MagicalBackground variant="cream">
+        <View style={styles.centered}>
+          <Text style={styles.missingEmoji}>🔍</Text>
+          <Text style={styles.missingTitle}>Discovery not found</Text>
+          <PlayfulPressable style={styles.backPill} onPress={() => router.back()}>
+            <Text style={styles.backPillText}>Go back</Text>
+          </PlayfulPressable>
+        </View>
+      </MagicalBackground>
     );
   }
 
@@ -201,9 +236,10 @@ export default function LibraryDiscoveryCardScreen() {
     : null;
 
   return (
-    <View style={styles.root}>
+    <MagicalBackground variant="cream" decorated={false}>
       <ScrollView
         ref={scrollRef}
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={[
           styles.content,
           {
@@ -214,18 +250,18 @@ export default function LibraryDiscoveryCardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable
+          <PlayfulPressable
             style={styles.circleButton}
             onPress={() => router.back()}
             accessibilityLabel="Back"
           >
             <Text style={styles.circleButtonText}>‹</Text>
-          </Pressable>
+          </PlayfulPressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>{entry.title}</Text>
             <Text style={styles.headerSubtitle}>Discovery Card</Text>
           </View>
-          <Pressable
+          <PlayfulPressable
             style={styles.circleButton}
             onPress={() => {
               if (!memory) {
@@ -242,7 +278,7 @@ export default function LibraryDiscoveryCardScreen() {
             <Text style={styles.circleButtonText}>
               {memory?.isFavorite ? "♥" : "♡"}
             </Text>
-          </Pressable>
+          </PlayfulPressable>
         </View>
 
         <DiscoveryHero
@@ -255,6 +291,10 @@ export default function LibraryDiscoveryCardScreen() {
             setSoundHint(`${entry.title} · ${entry.pronunciation}`)
           }
         />
+
+        {memoryTimeline ? (
+          <DiscoveryMemoryStatsBar stats={memoryTimeline.stats} />
+        ) : null}
 
         {graphNode?.description ? (
           <Text style={styles.description}>{graphNode.description}</Text>
@@ -353,6 +393,10 @@ export default function LibraryDiscoveryCardScreen() {
           </Text>
         </View>
 
+        {memoryTimeline ? (
+          <MemoryTimeline timeline={memoryTimeline} emoji={emoji} />
+        ) : null}
+
         <ContinueExploring items={continueItems} onSelect={openNode} />
 
         <Text style={styles.footnote}>
@@ -360,16 +404,13 @@ export default function LibraryDiscoveryCardScreen() {
           still come from Discover — not from browsing alone.
         </Text>
       </ScrollView>
-    </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
   centered: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 28,
@@ -386,14 +427,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.stroke,
+    borderWidth: 2,
+    borderColor: colors.pastelBlue,
+    ...shadows.soft,
   },
   circleButtonText: {
     fontFamily: fonts.display,
@@ -411,9 +453,9 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   headerSubtitle: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodySemi,
     fontSize: 13,
-    color: colors.navySoft,
+    color: colors.lavenderInk,
   },
   description: {
     fontFamily: fonts.body,
@@ -425,13 +467,15 @@ const styles = StyleSheet.create({
   },
   masteryRow: {
     backgroundColor: colors.pastelBlue,
-    borderRadius: radii.lg,
-    paddingVertical: 10,
+    borderRadius: radii.xl,
+    paddingVertical: 12,
     paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: colors.skyBlue,
   },
   masteryText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.navy,
     textAlign: "center",
   },
@@ -447,6 +491,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: 18,
     gap: 6,
+    borderWidth: 2,
+    borderColor: colors.sunshine,
   },
   activitiesTitle: {
     fontFamily: fonts.displaySemi,
@@ -467,6 +513,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
   },
+  missingEmoji: {
+    fontSize: 48,
+  },
   missingTitle: {
     fontFamily: fonts.display,
     fontSize: 28,
@@ -474,10 +523,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   backPill: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.skyBlue,
     borderRadius: radii.pill,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    minHeight: 48,
+    justifyContent: "center",
+    ...shadows.soft,
   },
   backPillText: {
     fontFamily: fonts.displaySemi,

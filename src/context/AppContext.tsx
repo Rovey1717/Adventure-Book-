@@ -14,6 +14,7 @@ import { memoryRepository } from "@/data/memory/MemoryRepository";
 import type { PendingDiscovery } from "@/domain/discovery/pending";
 import type { JourneySnapshot } from "@/domain/journey/types";
 import type { Memory } from "@/domain/memory/types";
+import { getDemoLearningProfile } from "@/domain/parent/profile";
 import { MemoryService } from "@/services/MemoryService";
 import type { AdventureBoard } from "@/services/AdventureService";
 import { AdventureService } from "@/services/AdventureService";
@@ -146,7 +147,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const attachLearningCard = useCallback(async (memory: Memory) => {
     const names = (await memoryService.list()).map((item) => item.objectName);
-    const card = learningAdventureService.generateForMemory(memory, names);
+    const profile = getDemoLearningProfile();
+    const card = learningAdventureService.generateForMemory(memory, names, {
+      age: profile.age,
+      spanishEnabled: profile.spanishEnabled,
+    });
     return memoryService.setLearningCard(memory.id, card);
   }, []);
 

@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 
 type Props = {
@@ -19,17 +21,23 @@ export function VideoCard({
     `A short ${objectName.toLowerCase()} video helps ${childName} learn from the real world.`;
 
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <Pressable
+    <View style={[styles.card, shadows.float]}>
+      <PlayfulPressable
         style={styles.stage}
         onPress={onPlay}
         accessibilityRole="button"
         accessibilityLabel={`Play ${objectName} video`}
+        tilt
       >
+        <LinearGradient
+          colors={[colors.pastelBlue, colors.pastelPurple]}
+          style={StyleSheet.absoluteFill}
+        />
+        <Text style={styles.stageEmoji}>🎬</Text>
         <View style={styles.playButton}>
           <Text style={styles.playIcon}>▶</Text>
         </View>
-      </Pressable>
+      </PlayfulPressable>
       <View style={styles.caption}>
         <Text style={styles.captionText}>{caption}</Text>
       </View>
@@ -39,28 +47,36 @@ export function VideoCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radii.xl,
+    borderRadius: radii.xxl,
     overflow: "hidden",
     backgroundColor: colors.surfaceRaised,
+    borderWidth: 1.5,
+    borderColor: colors.stroke,
   },
   stage: {
-    height: 180,
-    backgroundColor: colors.peach,
+    height: 188,
     alignItems: "center",
     justifyContent: "center",
+  },
+  stageEmoji: {
+    position: "absolute",
+    top: 16,
+    left: 18,
+    fontSize: 26,
+    opacity: 0.85,
   },
   playButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.cream,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
-    ...shadows.soft,
+    ...shadows.float,
   },
   playIcon: {
-    fontSize: 26,
-    color: colors.navy,
+    fontSize: 28,
+    color: colors.lavenderDeep,
     marginLeft: 4,
   },
   caption: {

@@ -30,7 +30,10 @@ import { DiscoverSearchResults } from "@/components/discover/DiscoverSearchResul
 import { ProcessingOverlay } from "@/components/discover/ProcessingOverlay";
 import { ShutterButton } from "@/components/discover/ShutterButton";
 import { SavedToast } from "@/components/discovery/SavedToast";
-import { colors, fonts } from "@/constants/theme";
+import { MagicalBackground } from "@/components/ui/MagicalBackground";
+import { PlayfulPressable } from "@/components/ui/PlayfulPressable";
+import { SoftCard } from "@/components/ui/SoftCard";
+import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { LibraryEntry } from "@/domain/library/types";
 
@@ -217,30 +220,56 @@ export default function DiscoverScreen() {
   ]);
 
   if (!cameraPermission) {
-    return <View style={styles.root} />;
+    return <MagicalBackground variant="sky" />;
   }
 
   if (!cameraPermission.granted) {
     return (
-      <View style={[styles.root, styles.permission]}>
-        <Text style={styles.permissionTitle}>Camera unlocks Discover</Text>
-        <Text style={styles.permissionBody}>
-          Adventure Book needs the camera so families can capture the real world
-          together. You can still search the Library to learn anytime.
-        </Text>
-        <Pressable
-          style={styles.permissionButton}
-          onPress={requestCameraPermission}
+      <MagicalBackground variant="sky">
+        <View
+          style={[
+            styles.permission,
+            {
+              paddingTop: insets.top + 24,
+              paddingBottom: insets.bottom + 24,
+            },
+          ]}
         >
-          <Text style={styles.permissionButtonText}>Enable Camera</Text>
-        </Pressable>
-        <Pressable
-          style={styles.permissionSecondary}
-          onPress={() => router.push("/(tabs)/library")}
-        >
-          <Text style={styles.permissionSecondaryText}>Browse Library</Text>
-        </Pressable>
-      </View>
+          <SoftCard tint="blue" style={styles.permissionCard} float>
+            <View style={styles.permissionInner}>
+              <Text style={styles.permissionEmoji}>📷</Text>
+              <Text style={styles.permissionTitle}>
+                Camera unlocks Discover!
+              </Text>
+              <Text style={styles.permissionBody}>
+                Adventure Book needs the camera so families can capture the
+                real world together. You can still search the Library to
+                learn anytime.
+              </Text>
+              <PlayfulPressable
+                style={styles.permissionButton}
+                onPress={requestCameraPermission}
+                accessibilityRole="button"
+                accessibilityLabel="Enable Camera"
+              >
+                <Text style={styles.permissionButtonText}>
+                  ✨ Enable Camera
+                </Text>
+              </PlayfulPressable>
+              <PlayfulPressable
+                style={styles.permissionSecondary}
+                onPress={() => router.push("/(tabs)/library")}
+                accessibilityRole="button"
+                accessibilityLabel="Browse Library"
+              >
+                <Text style={styles.permissionSecondaryText}>
+                  📚 Browse Library
+                </Text>
+              </PlayfulPressable>
+            </View>
+          </SoftCard>
+        </View>
+      </MagicalBackground>
     );
   }
 
@@ -266,7 +295,7 @@ export default function DiscoverScreen() {
       />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.brand}>Adventure Book</Text>
+        <Text style={styles.brand}>✨ Adventure Book</Text>
         <DiscoverSearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -279,17 +308,21 @@ export default function DiscoverScreen() {
           onSelect={openLibraryCard}
         />
         {!searchActive ? (
-          <Text style={styles.modeHint}>
-            {mode === "photo" && "Point at something wonderful"}
-            {mode === "video" &&
-              (isRecordingVideo ? "Recording…" : "Capture a short moment")}
-            {mode === "voice" &&
-              (isRecordingVoice ? "Listening…" : "Tell the story out loud")}
-          </Text>
+          <View style={styles.modeHintPill}>
+            <Text style={styles.modeHint}>
+              {mode === "photo" && "🌟 Point at something wonderful"}
+              {mode === "video" &&
+                (isRecordingVideo ? "🎥 Recording…" : "🎥 Capture a short moment")}
+              {mode === "voice" &&
+                (isRecordingVoice ? "🎙️ Listening…" : "🎙️ Tell the story out loud")}
+            </Text>
+          </View>
         ) : (
-          <Text style={styles.modeHint}>
-            Search Library · Capture saves memories & unlocks adventures
-          </Text>
+          <View style={styles.modeHintPill}>
+            <Text style={styles.modeHint}>
+              Search Library · Capture saves memories & unlocks adventures
+            </Text>
+          </View>
         )}
       </View>
 
@@ -315,15 +348,16 @@ export default function DiscoverScreen() {
         />
 
         <View style={styles.shutterRow}>
-          <Pressable
+          <PlayfulPressable
             onPress={() =>
               setFacing((current) => (current === "back" ? "front" : "back"))
             }
             style={styles.sideButton}
             accessibilityLabel="Flip camera"
+            accessibilityRole="button"
           >
-            <Text style={styles.sideButtonText}>Flip</Text>
-          </Pressable>
+            <Text style={styles.sideButtonEmoji}>🔄</Text>
+          </PlayfulPressable>
 
           <ShutterButton
             mode={mode}
@@ -334,7 +368,7 @@ export default function DiscoverScreen() {
             }}
           />
 
-          <View style={styles.sideButton} />
+          <View style={styles.sideButtonSpacer} />
         </View>
       </View>
 
@@ -370,12 +404,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 22,
     color: colors.cameraInk,
+    textShadowColor: "rgba(26,43,74,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  modeHintPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
   },
   modeHint: {
     fontFamily: fonts.bodySemi,
     fontSize: 14,
-    color: "rgba(247,255,248,0.78)",
-    marginTop: 2,
+    color: colors.cameraInk,
   },
   dismissScrim: {
     ...StyleSheet.absoluteFill,
@@ -397,26 +443,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   sideButton: {
-    width: 64,
-    height: 44,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  sideButtonText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.cameraInk,
+  sideButtonSpacer: {
+    width: 56,
+    height: 56,
+  },
+  sideButtonEmoji: {
+    fontSize: 22,
   },
   permission: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  permissionCard: {
+    width: "100%",
+    maxWidth: 380,
+  },
+  permissionInner: {
+    alignItems: "center",
+    gap: 14,
     padding: 28,
-    gap: 12,
-    backgroundColor: colors.skyMid,
+  },
+  permissionEmoji: {
+    fontSize: 56,
   },
   permissionTitle: {
     fontFamily: fonts.display,
-    fontSize: 28,
+    fontSize: 26,
     color: colors.ink,
     textAlign: "center",
   },
@@ -426,13 +489,17 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.inkMuted,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   permissionButton: {
-    backgroundColor: colors.orange,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 16,
+    backgroundColor: colors.skyBlue,
+    paddingHorizontal: 26,
+    paddingVertical: 16,
+    borderRadius: radii.pill,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.glow,
   },
   permissionButtonText: {
     fontFamily: fonts.displaySemi,
@@ -440,11 +507,14 @@ const styles = StyleSheet.create({
     color: colors.surfaceRaised,
   },
   permissionSecondary: {
-    paddingVertical: 10,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
   },
   permissionSecondaryText: {
     fontFamily: fonts.bodyBold,
     fontSize: 15,
-    color: colors.moss,
+    color: colors.skyBlue,
   },
 });

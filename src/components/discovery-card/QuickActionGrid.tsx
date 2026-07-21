@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 
 export type QuickActionId =
@@ -74,13 +75,10 @@ export function QuickActionGrid({
   return (
     <View style={styles.grid}>
       {actions.map((action) => (
-        <Pressable
+        <PlayfulPressable
           key={action.id}
-          style={({ pressed }) => [
-            styles.tile,
-            shadows.soft,
-            pressed && styles.pressed,
-          ]}
+          style={[styles.tile, shadows.soft]}
+          tilt
           onPress={() => onPress(action.id)}
           accessibilityRole="button"
           accessibilityLabel={action.label}
@@ -91,7 +89,7 @@ export function QuickActionGrid({
             </Text>
           </View>
           <Text style={styles.label}>{action.label}</Text>
-        </Pressable>
+        </PlayfulPressable>
       ))}
     </View>
   );
@@ -106,27 +104,25 @@ const styles = StyleSheet.create({
   tile: {
     width: "47.5%",
     backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.lg,
-    paddingVertical: 18,
+    borderRadius: radii.xl,
+    paddingVertical: 20,
     paddingHorizontal: 12,
     alignItems: "center",
     gap: 10,
-    minHeight: 108,
+    minHeight: 112,
     justifyContent: "center",
-  },
-  pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
+    borderWidth: 1.5,
+    borderColor: colors.stroke,
   },
   iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   icon: {
-    fontSize: 22,
+    fontSize: 24,
   },
   label: {
     fontFamily: fonts.bodyBold,

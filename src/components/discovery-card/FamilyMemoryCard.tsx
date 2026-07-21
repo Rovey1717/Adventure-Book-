@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii, shadows } from "@/constants/theme";
+import { PhotoFrame, SoftCard } from "@/components/ui";
+import { colors, fonts } from "@/constants/theme";
 import type { Memory } from "@/domain/memory/types";
 
 type Props = {
@@ -31,25 +32,48 @@ export function FamilyMemoryCard({ memory }: Props) {
     }. This moment lives in Adventure Book — not in Library.`;
 
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.eyebrow}>Family memory</Text>
-      <Text style={styles.title}>{headline}</Text>
-      <Text style={styles.story}>{story}</Text>
-      <Text style={styles.meta}>
-        {formatDate(memory.discoveredAt)}
-        {memory.locationLabel ? ` · ${memory.locationLabel}` : ""}
-        {memory.isFavorite ? " · ★ Favorite" : ""}
-      </Text>
-    </View>
+    <SoftCard tint="lavender" shimmer>
+      <View style={styles.card}>
+        <View style={styles.eyebrowRow}>
+          <Text style={styles.eyebrowEmoji}>💜</Text>
+          <Text style={styles.eyebrow}>Family memory</Text>
+        </View>
+
+        {memory.photoUri ? (
+          <PhotoFrame
+            uri={memory.photoUri}
+            height={150}
+            borderColor={colors.lavenderDeep}
+            style={styles.photo}
+          >
+            <Text style={styles.photoFallbackEmoji}>📷</Text>
+          </PhotoFrame>
+        ) : null}
+
+        <Text style={styles.title}>{headline}</Text>
+        <Text style={styles.story}>{story}</Text>
+        <Text style={styles.meta}>
+          {formatDate(memory.discoveredAt)}
+          {memory.locationLabel ? ` · ${memory.locationLabel}` : ""}
+          {memory.isFavorite ? " · ★ Favorite" : ""}
+        </Text>
+      </View>
+    </SoftCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.lavender,
-    borderRadius: radii.xl,
     padding: 20,
     gap: 8,
+  },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  eyebrowEmoji: {
+    fontSize: 13,
   },
   eyebrow: {
     fontFamily: fonts.bodyBold,
@@ -57,6 +81,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
     color: colors.lavenderInk,
+  },
+  photo: {
+    marginVertical: 4,
+  },
+  photoFallbackEmoji: {
+    fontSize: 40,
   },
   title: {
     fontFamily: fonts.displaySemi,

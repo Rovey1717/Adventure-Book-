@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { Memory } from "@/domain/memory/types";
@@ -54,26 +55,31 @@ export default function MemoryDetailScreen() {
   return (
     <ScrollView
       style={styles.root}
+      contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{
         paddingBottom: insets.bottom + 32,
+        flexGrow: 1,
       }}
     >
-      <View
-        style={[
-          styles.hero,
-          { backgroundColor: accent, paddingTop: insets.top + 12 },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
+      <View style={[styles.hero, { paddingTop: insets.top + 12 }]}>
+        <LinearGradient
+          colors={[accent, colors.cream]}
+          style={StyleSheet.absoluteFill}
+        />
+        <PlayfulPressable onPress={() => router.back()} style={styles.back}>
+          <Text style={styles.backText}>← Back</Text>
+        </PlayfulPressable>
         {showPhoto ? (
           <Image source={{ uri: memory.photoUri! }} style={styles.heroPhoto} />
         ) : (
-          <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+          <View style={styles.heroGlyphWrap}>
+            <Text style={styles.heroGlyph}>{memory.objectName.charAt(0)}</Text>
+          </View>
         )}
         <Text style={styles.heroTitle}>{memory.objectName}</Text>
-        <Text style={styles.heroMeta}>{statusLabel}</Text>
+        <View style={styles.heroMetaPill}>
+          <Text style={styles.heroMeta}>{statusLabel}</Text>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -86,7 +92,7 @@ export default function MemoryDetailScreen() {
           {memory.discoveryCount === 1 ? "" : "s"}
         </Text>
 
-        <Pressable
+        <PlayfulPressable
           style={styles.primary}
           onPress={() => {
             router.push(openLearningFromBook(memory.id));
@@ -97,9 +103,9 @@ export default function MemoryDetailScreen() {
               ? "🎉 Celebrate & Learn"
               : "Open Learning Card"}
           </Text>
-        </Pressable>
+        </PlayfulPressable>
 
-        <Pressable
+        <PlayfulPressable
           style={styles.favorite}
           onPress={() => {
             void (async () => {
@@ -109,9 +115,9 @@ export default function MemoryDetailScreen() {
           }}
         >
           <Text style={styles.favoriteText}>
-            {memory.isFavorite ? "Favorited" : "Add to Favorites"}
+            {memory.isFavorite ? "♥ Favorited" : "♡ Add to Favorites"}
           </Text>
-        </Pressable>
+        </PlayfulPressable>
 
         <Text style={styles.section}>Saved status</Text>
         <Text style={styles.meta}>✓ Forever in Adventure Book</Text>
@@ -132,38 +138,60 @@ const styles = StyleSheet.create({
   },
   hero: {
     paddingHorizontal: space.screen,
-    paddingBottom: 28,
+    paddingBottom: 32,
     gap: 8,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    overflow: "hidden",
   },
   heroPhoto: {
     width: "100%",
     height: 220,
-    borderRadius: 18,
+    borderRadius: radii.xxl,
     marginTop: 8,
   },
   back: {
     alignSelf: "flex-start",
     paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   backText: {
     fontFamily: fonts.bodyBold,
-    color: colors.surfaceRaised,
+    fontSize: 16,
+    color: colors.navy,
+  },
+  heroGlyphWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(255,255,255,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    alignSelf: "center",
   },
   heroGlyph: {
     fontFamily: fonts.display,
-    fontSize: 64,
-    color: "rgba(255,255,255,0.92)",
-    marginTop: 12,
+    fontSize: 48,
+    color: colors.navy,
   },
   heroTitle: {
     fontFamily: fonts.display,
     fontSize: 36,
-    color: colors.surfaceRaised,
+    color: colors.navy,
+    textAlign: "center",
+  },
+  heroMetaPill: {
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   heroMeta: {
     fontFamily: fonts.bodySemi,
     fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
+    color: colors.navySoft,
   },
   body: {
     padding: space.screen,
@@ -176,9 +204,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   primary: {
-    backgroundColor: colors.orange,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
+    backgroundColor: colors.coral,
+    borderRadius: radii.pill,
+    paddingVertical: 17,
     alignItems: "center",
     marginTop: 12,
   },
@@ -189,15 +217,15 @@ const styles = StyleSheet.create({
   },
   favorite: {
     alignSelf: "flex-start",
-    backgroundColor: colors.orangeSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
+    backgroundColor: colors.pastelPink,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: radii.pill,
     marginVertical: 10,
   },
   favoriteText: {
     fontFamily: fonts.bodyBold,
-    color: colors.orangeDeep,
+    color: colors.coralDeep,
   },
   section: {
     fontFamily: fonts.displaySemi,

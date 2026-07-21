@@ -2,6 +2,7 @@ import type {
   ChildNodeProgress,
   ChildProfile,
 } from "@/domain/graph/types";
+import { getDemoLearningProfile } from "@/domain/parent/profile";
 
 /**
  * Per-child learning state on the world graph.
@@ -11,11 +12,14 @@ export class ChildKnowledgeGraph {
   private readonly progress = new Map<string, ChildNodeProgress>();
 
   constructor(
-    private readonly profile: ChildProfile = {
-      id: "child_emma",
-      name: "Emma",
-      age: 5,
-    },
+    private readonly profile: ChildProfile = (() => {
+      const demo = getDemoLearningProfile();
+      return {
+        id: "child_emma",
+        name: demo.name,
+        age: demo.age,
+      };
+    })(),
   ) {}
 
   getProfile() {

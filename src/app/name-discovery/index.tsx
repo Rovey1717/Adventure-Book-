@@ -3,18 +3,17 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProcessingOverlay } from "@/components/discover/ProcessingOverlay";
-import { colors, fonts, space } from "@/constants/theme";
+import { MagicalBackground, PlayfulPressable } from "@/components/ui";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { LibraryCategoryId, LibraryEntry } from "@/domain/library/types";
 import type { MemoryCategory } from "@/domain/shared/categories";
@@ -96,15 +95,28 @@ export default function NameDiscoveryScreen() {
 
   if (!pendingDiscovery) {
     return (
-      <View style={[styles.root, styles.empty]}>
-        <Text style={styles.emptyTitle}>No photo yet</Text>
-        <Text style={styles.emptyBody}>
-          Capture something wonderful on Discover, then name it here.
-        </Text>
-        <Pressable style={styles.primary} onPress={() => router.replace("/")}>
-          <Text style={styles.primaryText}>Back to Camera</Text>
-        </Pressable>
-      </View>
+      <MagicalBackground variant="cream">
+        <View
+          style={[
+            styles.empty,
+            {
+              paddingTop: insets.top + 28,
+              paddingBottom: insets.bottom + 28,
+            },
+          ]}
+        >
+          <Text style={styles.emptyTitle}>No photo yet</Text>
+          <Text style={styles.emptyBody}>
+            Capture something wonderful on Discover, then name it here.
+          </Text>
+          <PlayfulPressable
+            style={styles.primary}
+            onPress={() => router.replace("/")}
+          >
+            <Text style={styles.primaryText}>Back to Camera</Text>
+          </PlayfulPressable>
+        </View>
+      </MagicalBackground>
     );
   }
 
@@ -114,18 +126,14 @@ export default function NameDiscoveryScreen() {
     !pendingDiscovery.mediaUri.startsWith("mock-");
 
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.skyTop, "#FFE7B8", colors.skyBottom]}
-        style={StyleSheet.absoluteFill}
-      />
-
+    <MagicalBackground variant="cream">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="never"
           contentContainerStyle={[
             styles.content,
             {
@@ -177,7 +185,7 @@ export default function NameDiscoveryScreen() {
             <View style={styles.suggestions}>
               <Text style={styles.suggestionsLabel}>From the Library</Text>
               {suggestions.map((entry) => (
-                <Pressable
+                <PlayfulPressable
                   key={entry.id}
                   style={styles.suggestionRow}
                   onPress={() => onPickSuggestion(entry)}
@@ -186,12 +194,12 @@ export default function NameDiscoveryScreen() {
                   <Text style={styles.suggestionMeta}>
                     {entry.pronunciation}
                   </Text>
-                </Pressable>
+                </PlayfulPressable>
               ))}
             </View>
           ) : null}
 
-          <Pressable
+          <PlayfulPressable
             style={[styles.primary, !canContinue && styles.primaryDisabled]}
             disabled={!canContinue || isProcessing}
             onPress={() => {
@@ -199,15 +207,15 @@ export default function NameDiscoveryScreen() {
             }}
           >
             <Text style={styles.primaryText}>Save Discovery</Text>
-          </Pressable>
+          </PlayfulPressable>
 
-          <Pressable
+          <PlayfulPressable
             style={styles.secondary}
             disabled={isProcessing}
             onPress={onRetake}
           >
             <Text style={styles.secondaryText}>Retake Photo</Text>
-          </Pressable>
+          </PlayfulPressable>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -215,14 +223,13 @@ export default function NameDiscoveryScreen() {
         visible={isProcessing}
         message="Saving your discovery…"
       />
-    </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.skyMid,
   },
   flex: {
     flex: 1,
@@ -254,12 +261,12 @@ const styles = StyleSheet.create({
   preview: {
     width: "100%",
     height: 220,
-    borderRadius: 22,
+    borderRadius: radii.xxl,
     backgroundColor: colors.surfaceRaised,
   },
   previewFallback: {
     height: 180,
-    borderRadius: 22,
+    borderRadius: radii.xxl,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
@@ -280,8 +287,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.ink,
     backgroundColor: colors.surfaceRaised,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: radii.lg,
+    borderWidth: 2,
     borderColor: colors.stroke,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -297,10 +304,10 @@ const styles = StyleSheet.create({
   },
   suggestionRow: {
     backgroundColor: colors.surfaceRaised,
-    borderRadius: 14,
+    borderRadius: radii.lg,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.stroke,
     gap: 2,
   },
@@ -315,9 +322,9 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
   primary: {
-    backgroundColor: colors.orange,
-    borderRadius: 18,
-    paddingVertical: 16,
+    backgroundColor: colors.coral,
+    borderRadius: radii.pill,
+    paddingVertical: 18,
     alignItems: "center",
     marginTop: 10,
   },
@@ -326,24 +333,25 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.surfaceRaised,
   },
   secondary: {
-    backgroundColor: colors.mossSoft,
-    borderRadius: 18,
+    backgroundColor: colors.pastelGreen,
+    borderRadius: radii.pill,
     paddingVertical: 16,
     alignItems: "center",
   },
   secondaryText: {
     fontFamily: fonts.displaySemi,
     fontSize: 17,
-    color: colors.mossDeep,
+    color: colors.grassDeep,
   },
   empty: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 28,
+    paddingHorizontal: 28,
     gap: 12,
   },
   emptyTitle: {

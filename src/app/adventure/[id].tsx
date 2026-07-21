@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, space } from "@/constants/theme";
+import { MagicalBackground, PlayfulPressable, SoftCard } from "@/components/ui";
+import { colors, fonts, radii, space } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import type { Adventure } from "@/domain/adventure/types";
 import { adventureRepository } from "@/data/adventure/AdventureRepository";
@@ -26,122 +27,161 @@ export default function AdventureDetailScreen() {
 
   if (!adventure) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.body}>Loading adventure…</Text>
-      </View>
+      <MagicalBackground variant="celebration">
+        <View style={styles.center}>
+          <Text style={styles.body}>Loading adventure…</Text>
+        </View>
+      </MagicalBackground>
     );
   }
 
   return (
-    <View
-      style={[
-        styles.root,
-        {
-          paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + 24,
-        },
-      ]}
-    >
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.back}>Back</Text>
-      </Pressable>
-      <Text style={styles.eyebrow}>From your {adventure.objectName} discovery</Text>
-      <Text style={styles.title}>{adventure.title}</Text>
-      <Text style={styles.body}>
-        Status: {adventure.status.replace("_", " ")} · {adventure.points} points
-      </Text>
-      <Text style={styles.body}>
-        Personalized from your real-world Memory. Future AI will tailor these by
-        age, interests, season, and learning goals.
-      </Text>
-
-      {adventure.status !== "completed" ? (
-        <Pressable
-          style={styles.button}
-          onPress={() => {
-            void (async () => {
-              await adventureRepository.update(adventure.id, {
-                status: "completed",
-                completedAt: new Date().toISOString(),
-              });
-              const refreshed = await adventureRepository.getByMemoryId(
-                adventure.memoryId,
-              );
-              await memoryRepository.update(adventure.memoryId, {
-                adventuresCompleted: refreshed.filter(
-                  (item) => item.status === "completed",
-                ).length,
-              });
-              await refresh();
-              await load();
-            })();
-          }}
-        >
-          <Text style={styles.buttonText}>Mark Complete</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.done}>
-          <Text style={styles.buttonText}>Completed</Text>
-        </View>
-      )}
-
-      <Pressable
-        style={styles.link}
-        onPress={() => router.push(`/(tabs)/adventure-book`)}
+    <MagicalBackground variant="celebration">
+      <View
+        style={[
+          styles.root,
+          {
+            paddingTop: insets.top + 16,
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
       >
-        <Text style={styles.linkText}>View in Adventure Book</Text>
-      </Pressable>
-    </View>
+        <PlayfulPressable onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.back}>← Back</Text>
+        </PlayfulPressable>
+
+        <SoftCard tint="coral" float style={styles.card}>
+          <View style={styles.cardInner}>
+            <Text style={styles.eyebrow}>
+              From your {adventure.objectName} discovery
+            </Text>
+            <Text style={styles.title}>{adventure.title}</Text>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>
+                {adventure.status.replace("_", " ")} · {adventure.points} pts
+              </Text>
+            </View>
+            <Text style={styles.body}>
+              This activity is about your {adventure.objectName} discovery —
+              chosen for your child's age and learning goals, never a random
+              quiz.
+            </Text>
+
+            {adventure.status !== "completed" ? (
+              <PlayfulPressable
+                style={styles.button}
+                onPress={() => {
+                  void (async () => {
+                    await adventureRepository.update(adventure.id, {
+                      status: "completed",
+                      completedAt: new Date().toISOString(),
+                    });
+                    const refreshed = await adventureRepository.getByMemoryId(
+                      adventure.memoryId,
+                    );
+                    await memoryRepository.update(adventure.memoryId, {
+                      adventuresCompleted: refreshed.filter(
+                        (item) => item.status === "completed",
+                      ).length,
+                    });
+                    await refresh();
+                    await load();
+                  })();
+                }}
+              >
+                <Text style={styles.buttonText}>🎉 Mark Complete</Text>
+              </PlayfulPressable>
+            ) : (
+              <View style={styles.done}>
+                <Text style={styles.buttonText}>✓ Completed</Text>
+              </View>
+            )}
+          </View>
+        </SoftCard>
+
+        <PlayfulPressable
+          style={styles.link}
+          onPress={() => router.push(`/(tabs)/adventure-book`)}
+        >
+          <Text style={styles.linkText}>View in Adventure Book</Text>
+        </PlayfulPressable>
+      </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
     paddingHorizontal: space.screen,
-    gap: 12,
+    gap: 14,
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  backButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
   back: {
     fontFamily: fonts.bodyBold,
-    color: colors.moss,
-    marginBottom: 8,
+    fontSize: 16,
+    color: colors.grassDeep,
+  },
+  card: {
+    marginTop: 4,
+  },
+  cardInner: {
+    padding: 22,
+    gap: 10,
   },
   eyebrow: {
     fontFamily: fonts.bodySemi,
     fontSize: 13,
-    color: colors.inkSoft,
+    color: colors.coralDeep,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
   title: {
     fontFamily: fonts.display,
     fontSize: 30,
-    color: colors.ink,
+    color: colors.navy,
+  },
+  statusPill: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.sunshine,
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  statusText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.navy,
+    textTransform: "capitalize",
   },
   body: {
     fontFamily: fonts.body,
     fontSize: 15,
     lineHeight: 22,
-    color: colors.inkMuted,
+    color: colors.navySoft,
   },
   button: {
     marginTop: 16,
-    backgroundColor: colors.orange,
-    borderRadius: 16,
-    paddingVertical: 14,
+    backgroundColor: colors.coral,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
     alignItems: "center",
   },
   done: {
     marginTop: 16,
-    backgroundColor: colors.moss,
-    borderRadius: 16,
-    paddingVertical: 14,
+    backgroundColor: colors.grassDeep,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
     alignItems: "center",
   },
   buttonText: {
@@ -156,6 +196,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontFamily: fonts.bodyBold,
-    color: colors.moss,
+    color: colors.grassDeep,
   },
 });

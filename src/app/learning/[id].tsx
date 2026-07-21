@@ -1,11 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { CelebrationBurst } from "@/components/discovery/CelebrationBurst";
 import { LearningCard } from "@/components/learning-card";
-import { colors, fonts, radii } from "@/constants/theme";
+import {
+  MagicalBackground,
+  PlayfulPressable,
+  PulseGlow,
+  SoftCard,
+  SparkleRow,
+} from "@/components/ui";
+import { colors, fonts, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 /**
@@ -101,20 +115,11 @@ export default function LearningScreen() {
   const discoveryName = memory?.objectName ?? "Discovery";
 
   if (!memoryId || phase === "loading" || !cardReady || !card || !memory) {
-    return (
-      <View style={styles.loading}>
-        <Text style={styles.meta}>Preparing your learning adventure…</Text>
-      </View>
-    );
+    return <PlayfulLoading />;
   }
 
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.skyTop, colors.cream, colors.skyBottom]}
-        style={StyleSheet.absoluteFill}
-      />
-
+    <MagicalBackground variant="cream" decorated={phase !== "celebration"}>
       {phase === "celebration" ? (
         <CelebrationBurst
           discoveryName={discoveryName}
@@ -128,53 +133,98 @@ export default function LearningScreen() {
           contentPaddingBottom={insets.bottom + 28}
           header={
             <View style={styles.headerRow}>
-              <Pressable
+              <PlayfulPressable
                 onPress={() => router.replace("/(tabs)")}
                 hitSlop={12}
                 accessibilityLabel="Back to Discover"
+                style={styles.backBtn}
               >
-                <Text style={styles.back}>Back</Text>
-              </Pressable>
+                <Text style={styles.back}>← Back</Text>
+              </PlayfulPressable>
               <Text style={styles.headerLabel}>Learning Card</Text>
               <View style={styles.backSpacer} />
             </View>
           }
           footer={
-            <Pressable
-              style={styles.done}
-              onPress={() => {
-                void (async () => {
-                  const unlock = await completeLearningCard(memoryId);
-                  if (unlock) {
-                    router.replace(`/adventure-unlock/${memoryId}`);
-                  } else {
-                    router.replace("/(tabs)/adventure-book");
-                  }
-                })();
-              }}
-            >
-              <Text style={styles.doneText}>Finish Learning Card</Text>
-            </Pressable>
+            <PulseGlow color={colors.coral}>
+              <PlayfulPressable
+                style={styles.done}
+                onPress={() => {
+                  void (async () => {
+                    const unlock = await completeLearningCard(memoryId);
+                    if (unlock) {
+                      router.replace(`/adventure-unlock/${memoryId}`);
+                    } else {
+                      router.replace("/(tabs)/adventure-book");
+                    }
+                  })();
+                }}
+              >
+                <Text style={styles.doneText}>Finish Learning Card ⭐</Text>
+              </PlayfulPressable>
+            </PulseGlow>
           }
         />
       )}
-    </View>
+    </MagicalBackground>
+  );
+}
+
+function PlayfulLoading() {
+  const bob = useSharedValue(0);
+
+  useEffect(() => {
+    bob.value = withRepeat(
+      withSequence(
+        withTiming(-10, { duration: 500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(10, { duration: 500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    );
+  }, [bob]);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value }],
+  }));
+
+  return (
+    <MagicalBackground variant="cream">
+      <View style={styles.loading}>
+        <SoftCard tint="yellow" float>
+          <View style={styles.loadingInner}>
+            <SparkleRow count={4} />
+            <Animated.Text style={[styles.loadingEmoji, style]}>
+              🔍
+            </Animated.Text>
+            <Text style={styles.meta}>Preparing your learning adventure…</Text>
+          </View>
+        </SoftCard>
+      </View>
+    </MagicalBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.cream,
     padding: 24,
   },
+  loadingInner: {
+    padding: 28,
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingEmoji: {
+    fontSize: 48,
+  },
   meta: {
-    fontFamily: fonts.body,
-    fontSize: 16,
+    fontFamily: fonts.bodySemi,
+    fontSize: 17,
     color: colors.inkMuted,
+    textAlign: "center",
   },
   headerRow: {
     flexDirection: "row",
@@ -182,30 +232,36 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
+  backBtn: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
   back: {
     fontFamily: fonts.bodyBold,
     fontSize: 16,
-    color: colors.moss,
-    width: 64,
+    color: colors.skyBlue,
+    width: 72,
   },
-  backSpacer: { width: 64 },
+  backSpacer: { width: 72 },
   headerLabel: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 13,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: colors.inkSoft,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.lavenderInk,
   },
   done: {
-    backgroundColor: colors.orange,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
+    backgroundColor: colors.coral,
+    borderRadius: radii.xl,
+    paddingVertical: 18,
     alignItems: "center",
     marginTop: 8,
+    minHeight: 56,
+    justifyContent: "center",
+    ...shadows.float,
   },
   doneText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.surfaceRaised,
   },
 });

@@ -6,7 +6,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { colors, fonts, radii } from "@/constants/theme";
 
 type Props = {
   value: string;
@@ -29,15 +29,17 @@ export function DiscoverSearchBar({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.icon} accessibilityElementsHidden>
-        🔎
-      </Text>
+      <View style={styles.iconBubble}>
+        <Text style={styles.icon} accessibilityElementsHidden>
+          🔎
+        </Text>
+      </View>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
         placeholder="What would you like to discover today?"
-        placeholderTextColor="rgba(22,53,44,0.45)"
+        placeholderTextColor="rgba(26,43,74,0.4)"
         style={styles.input}
         autoCapitalize="words"
         autoCorrect
@@ -62,14 +64,22 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,249,241,0.94)",
-    borderRadius: 22,
-    paddingLeft: 14,
-    paddingRight: 10,
-    minHeight: 52,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.pill,
+    paddingLeft: 8,
+    paddingRight: 8,
+    minHeight: 56,
+    gap: 10,
+    borderWidth: 2,
+    borderColor: "rgba(77,183,245,0.3)",
+  },
+  iconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.pastelBlue,
+    alignItems: "center",
+    justifyContent: "center",
   },
   icon: {
     fontSize: 18,
@@ -82,16 +92,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   clear: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.mossSoft,
+    backgroundColor: colors.pastelBlue,
   },
   clearText: {
     fontFamily: fonts.bodyBold,
     fontSize: 14,
-    color: colors.mossDeep,
+    color: colors.skyBlue,
   },
 });

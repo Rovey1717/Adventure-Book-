@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { PlayfulPressable, PulseGlow } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 
 type Props = {
@@ -16,6 +18,7 @@ export function AdventureBanner({ objectName, unlocked, onStart }: Props) {
   if (!unlocked) {
     return (
       <View style={[styles.lockedCard, shadows.soft]}>
+        <Text style={styles.lockedEmoji}>🔒</Text>
         <Text style={styles.lockedEyebrow}>Adventure waiting</Text>
         <Text style={styles.lockedTitle}>
           Discover this in the real world to unlock your Adventure.
@@ -29,47 +32,66 @@ export function AdventureBanner({ objectName, unlocked, onStart }: Props) {
   }
 
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.sparkle}>✦ ✦</Text>
-      <Text style={styles.eyebrow}>Signature</Text>
-      <Text style={styles.title}>Take the {objectName} Adventure</Text>
-      <Text style={styles.features}>
-        Celebrate · Watch · Explore · Quiz · Challenge · Talk · Save
-      </Text>
-      <Pressable
-        style={styles.cta}
-        onPress={onStart}
-        accessibilityRole="button"
-        accessibilityLabel={`Start the ${objectName} adventure`}
+    <View style={[styles.card, shadows.float]}>
+      <LinearGradient
+        colors={[colors.coral, colors.sunshine]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradient}
       >
-        <Text style={styles.ctaText}>Start Adventure →</Text>
-      </Pressable>
+        <Text style={styles.sparkle}>✦ ✦ ✦</Text>
+        <View style={styles.eyebrowPill}>
+          <Text style={styles.eyebrow}>Signature</Text>
+        </View>
+        <Text style={styles.title}>Take the {objectName} Adventure</Text>
+        <Text style={styles.features}>
+          Celebrate · Watch · Explore · Quiz · Challenge · Talk · Save
+        </Text>
+        <PulseGlow color={colors.sunshineDeep}>
+          <PlayfulPressable
+            style={styles.cta}
+            onPress={onStart}
+            accessibilityRole="button"
+            accessibilityLabel={`Start the ${objectName} adventure`}
+          >
+            <Text style={styles.ctaText}>Start Adventure →</Text>
+          </PlayfulPressable>
+        </PulseGlow>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.navy,
-    borderRadius: radii.xl,
+    borderRadius: radii.xxl,
+    overflow: "hidden",
+  },
+  gradient: {
     padding: 22,
     gap: 10,
-    overflow: "hidden",
   },
   sparkle: {
     position: "absolute",
     top: 16,
     right: 18,
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.65)",
     fontSize: 14,
     letterSpacing: 4,
+  },
+  eyebrowPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.35)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   eyebrow: {
     fontFamily: fonts.bodyBold,
     fontSize: 12,
     letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.72)",
+    color: colors.surfaceRaised,
   },
   title: {
     fontFamily: fonts.display,
@@ -78,29 +100,35 @@ const styles = StyleSheet.create({
     color: colors.surfaceRaised,
   },
   features: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodySemi,
     fontSize: 13,
     lineHeight: 20,
-    color: "rgba(255,255,255,0.62)",
+    color: "rgba(255,255,255,0.88)",
     marginBottom: 6,
   },
   cta: {
-    backgroundColor: colors.sunshine,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: radii.pill,
-    paddingVertical: 15,
+    paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
   },
   ctaText: {
     fontFamily: fonts.displaySemi,
-    fontSize: 16,
-    color: colors.navy,
+    fontSize: 17,
+    color: colors.coralDeep,
   },
   lockedCard: {
-    backgroundColor: colors.lavender,
-    borderRadius: radii.xl,
+    backgroundColor: colors.pastelPurple,
+    borderRadius: radii.xxl,
     padding: 22,
     gap: 8,
+    borderWidth: 1.5,
+    borderColor: colors.stroke,
+  },
+  lockedEmoji: {
+    fontSize: 28,
+    marginBottom: 2,
   },
   lockedEyebrow: {
     fontFamily: fonts.bodyBold,

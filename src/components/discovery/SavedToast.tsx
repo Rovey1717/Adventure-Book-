@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,36 +19,43 @@ type Props = {
 };
 
 /**
- * Lightweight success toast after Continue Exploring.
+ * Playful success toast after Continue Exploring.
  */
 export function SavedToast({ message, onDone }: Props) {
   const insets = useSafeAreaInsets();
   const opacity = useSharedValue(1);
+  const scale = useSharedValue(0.9);
 
   useEffect(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 200 });
     opacity.value = withDelay(
       2200,
       withTiming(0, { duration: 280 }, (finished) => {
         if (finished) runOnJS(onDone)();
       }),
     );
-  }, [onDone, opacity]);
+  }, [onDone, opacity, scale]);
 
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(280)}
+      entering={FadeInDown.duration(280).springify()}
       exiting={FadeOutUp.duration(200)}
       style={[
         styles.toast,
-        shadows.soft,
+        shadows.float,
         style,
         { top: insets.top + 12 },
       ]}
       pointerEvents="none"
     >
-      <Text style={styles.text}>✓ {message}</Text>
+      <Text style={styles.star}>⭐</Text>
+      <Text style={styles.text}>{message}</Text>
+      <Text style={styles.cheer}>Great Job!</Text>
     </Animated.View>
   );
 }
@@ -58,16 +66,29 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     left: 24,
     right: 24,
-    backgroundColor: colors.navy,
-    borderRadius: radii.lg,
-    paddingVertical: 14,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    paddingVertical: 16,
     paddingHorizontal: 18,
     zIndex: 30,
+    alignItems: "center",
+    gap: 2,
+    borderWidth: 2.5,
+    borderColor: colors.grass,
+  },
+  star: {
+    fontSize: 22,
+    marginBottom: 2,
   },
   text: {
     fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.cameraInk,
+    fontSize: 16,
+    color: colors.navy,
     textAlign: "center",
+  },
+  cheer: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    color: colors.grassDeep,
   },
 });

@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { PlayfulPressable } from "@/components/ui";
 import { colors, fonts, radii, shadows } from "@/constants/theme";
 import type { RelatedDiscovery } from "@/services/graph/LearningGraphService";
 
@@ -6,6 +7,13 @@ type Props = {
   items: RelatedDiscovery[];
   onSelect: (id: string) => void;
 };
+
+const ROW_TINTS = [
+  colors.pastelBlue,
+  colors.pastelGreen,
+  colors.pastelPink,
+  colors.pastelYellow,
+];
 
 /** Graph neighbors — never hardcoded related lists. */
 export function RelatedDiscoveries({ items, onSelect }: Props) {
@@ -18,19 +26,22 @@ export function RelatedDiscoveries({ items, onSelect }: Props) {
         Linked through the Garden learning graph
       </Text>
       <View style={styles.list}>
-        {items.map((item) => (
-          <Pressable
+        {items.map((item, index) => (
+          <PlayfulPressable
             key={item.id}
-            style={({ pressed }) => [
-              styles.row,
-              shadows.soft,
-              pressed && styles.pressed,
-            ]}
+            style={[styles.row, shadows.soft]}
             onPress={() => onSelect(item.id)}
             accessibilityRole="button"
             accessibilityLabel={`Open ${item.name}`}
           >
-            <Text style={styles.emoji}>{item.emoji}</Text>
+            <View
+              style={[
+                styles.emojiWrap,
+                { backgroundColor: ROW_TINTS[index % ROW_TINTS.length] },
+              ]}
+            >
+              <Text style={styles.emoji}>{item.emoji}</Text>
+            </View>
             <View style={styles.copy}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.reason} numberOfLines={2}>
@@ -38,7 +49,7 @@ export function RelatedDiscoveries({ items, onSelect }: Props) {
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
-          </Pressable>
+          </PlayfulPressable>
         ))}
       </View>
     </View>
@@ -68,15 +79,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     paddingVertical: 14,
     paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: colors.stroke,
   },
-  pressed: {
-    opacity: 0.92,
+  emojiWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   copy: {
     flex: 1,
@@ -96,6 +113,6 @@ const styles = StyleSheet.create({
   chevron: {
     fontFamily: fonts.display,
     fontSize: 24,
-    color: colors.moss,
+    color: colors.grass,
   },
 });
